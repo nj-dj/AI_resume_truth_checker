@@ -17,6 +17,7 @@ const envSchema = z.object({
   GEMINI_FALLBACK_MODELS: z.string().optional().default("gemini-2.0-flash,gemini-1.5-flash-001"),
   GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(5),
+  VERCEL_URL: z.string().optional().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -29,7 +30,10 @@ if (!parsed.success) {
 export const env = {
   nodeEnv: parsed.data.NODE_ENV,
   port: parsed.data.PORT,
-  appOrigins: parsed.data.APP_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean),
+  appOrigins: [
+    ...parsed.data.APP_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean),
+    parsed.data.VERCEL_URL ? `https://${parsed.data.VERCEL_URL}` : "",
+  ].filter(Boolean),
   mongodbUri: parsed.data.MONGODB_URI?.trim() ?? "",
   geminiApiKey: parsed.data.GEMINI_API_KEY,
   geminiModel: parsed.data.GEMINI_MODEL,

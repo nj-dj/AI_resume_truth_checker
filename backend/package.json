@@ -2,7 +2,7 @@
   "name": "ai-resume-truth-checker-backend",
   "version": "1.0.0",
   "description": "Backend for AI Resume Truth Checker",
-  "main": "src/server.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
