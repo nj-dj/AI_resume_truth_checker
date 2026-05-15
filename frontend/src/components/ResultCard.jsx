@@ -67,6 +67,28 @@ export default function ResultCard({ result, githubInsight }) {
             <p className="mt-3 text-sm leading-7 text-slate-400">{summary}</p>
           </div>
 
+          {Array.isArray(result.strengths) && result.strengths.length ? (
+            <div className="mt-6 rounded-2xl border border-emerald-400/10 bg-emerald-500/[0.04] p-5">
+              <p className="text-sm font-medium text-emerald-200">Strengths</p>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-emerald-100/90">
+                {result.strengths.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {Array.isArray(result.weaknesses) && result.weaknesses.length ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/10 bg-amber-500/[0.04] p-5">
+              <p className="text-sm font-medium text-amber-100">Watchouts</p>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-amber-50/90">
+                {result.weaknesses.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="mt-6 rounded-2xl border border-cyan-400/10 bg-cyan-500/[0.04] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>

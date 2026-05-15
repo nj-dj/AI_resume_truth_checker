@@ -1,7 +1,8 @@
 import { StatusCodes } from "http-status-codes";
 
-import { generateGeminiContent } from "../config/gemini.js";
+import { generateLlmText } from "./ai/llm-provider.js";
 import { ApiError } from "../utils/api-error.js";
+import { extractJsonStringFromLlm } from "../utils/extract-json-from-llm.js";
 
 class AiEvaluatorService {
   async evaluateCandidate(resumeData, githubData, skillValidation) {
@@ -30,7 +31,7 @@ class AiEvaluatorService {
         throw new ApiError(StatusCodes.BAD_GATEWAY, "Gemini returned an empty response for candidate evaluation");
       }
 
-      const parsedJson = JSON.parse(this.extractJsonString(content));
+      const parsedJson = JSON.parse(extractJsonStringFromLlm(content));
       return this.normalizeEvaluation(parsedJson, enrichedInput);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -41,56 +42,6 @@ class AiEvaluatorService {
         cause: error.message,
       });
     }
-  }
-
-  getEvaluationJsonSchema() {
-    return {
-      type: "object",
-      additionalProperties: false,
-      required: ["score", "verified_skills", "suspicious_claims", "summary", "decision", "confidence"],
-      properties: {
-        score: {
-          type: "integer",
-          minimum: 0,
-          maximum: 100,
-        },
-        verified_skills: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["skill", "evidence"],
-            properties: {
-              skill: { type: "string" },
-              evidence: { type: "string" },
-            },
-          },
-        },
-        suspicious_claims: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["skill", "reason"],
-            properties: {
-              skill: { type: "string" },
-              reason: { type: "string" },
-            },
-          },
-        },
-        summary: {
-          type: "string",
-        },
-        decision: {
-          type: "string",
-          enum: ["Hire", "Reject", "Maybe"],
-        },
-        confidence: {
-          type: "string",
-          enum: ["Low", "Medium", "High"],
-        },
-      },
-    };
   }
 
   normalizeResumeData(resumeData) {
@@ -171,6 +122,14 @@ class AiEvaluatorService {
     };
   }
 
+  normalizeStringList(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean);
+  }
+
   normalizeEvaluation(evaluation, input) {
     return {
       score: this.clampScore(evaluation?.score ?? input.base_score),
@@ -199,6 +158,8 @@ class AiEvaluatorService {
       summary: typeof evaluation?.summary === "string" ? evaluation.summary.trim() : "",
       decision: this.normalizeDecision(evaluation?.decision),
       confidence: this.normalizeConfidence(evaluation?.confidence),
+      strengths: this.normalizeStringList(evaluation?.strengths),
+      weaknesses: this.normalizeStringList(evaluation?.weaknesses),
     };
   }
 
@@ -274,16 +235,6 @@ class AiEvaluatorService {
     return verifiedSkills.find((item) => item.skill === skill)?.evidence ?? "";
   }
 
-  extractJsonString(content) {
-    const trimmed = content.trim();
-
-    if (trimmed.startsWith("```")) {
-      return trimmed.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "").trim();
-    }
-
-    return trimmed;
-  }
-
   buildEvaluationPrompt({ resumeData, githubData, skillValidation, base_score }) {
     return `You are a senior technical recruiter.
 
@@ -312,9 +263,11 @@ Return ONLY JSON:
       "reason": ""
     }
   ],
+  "strengths": ["", ""],
+  "weaknesses": ["", ""],
   "summary": "",
   "decision": "Hire / Reject / Maybe",
-  "confidence": ""
+  "confidence": "Low | Medium | High"
 }
 
 Data:

@@ -1,14 +1,14 @@
 import { StatusCodes } from "http-status-codes";
-import mammoth from "mammoth";
-import pdfParse from "pdf-parse";
 
-import { generateGeminiContent } from "../config/gemini.js";
+import { generateLlmText } from "./ai/llm-provider.js";
 import { isDatabaseConnected } from "../database/mongodb.js";
 import { ResumeAnalysis } from "../models/resume-analysis.model.js";
 import { resumeAnalysisSchema } from "../validators/resume.validator.js";
 import { ApiError } from "../utils/api-error.js";
+import { extractJsonStringFromLlm } from "../utils/extract-json-from-llm.js";
 import { logger } from "../utils/logger.js";
 import { aiEvaluatorService } from "./ai-evaluator.service.js";
+import { documentTextService } from "./document-text.service.js";
 import { githubService } from "./github.service.js";
 
 class ResumeAnalysisService {
@@ -29,7 +29,7 @@ class ResumeAnalysisService {
       fileName: file.originalname,
     });
 
-    const resumeText = await this.executeStep("extract_resume_text", async () => this.extractResumeText(file), {
+    const resumeText = await this.executeStep("extract_resume_text", async () => documentTextService.extractTextFromFile(file), {
       fileName: file.originalname,
     });
 
@@ -93,92 +93,12 @@ class ResumeAnalysisService {
         decision: evaluation.decision,
         verified_skills: evaluation.verified_skills,
         suspicious_claims: evaluation.suspicious_claims,
-        strengths: evaluation.strengths,
-        weaknesses: evaluation.weaknesses,
+        strengths: evaluation.strengths ?? [],
+        weaknesses: evaluation.weaknesses ?? [],
         summary: evaluation.summary,
+        confidence: evaluation.confidence,
       },
     };
-  }
-
-  async extractResumeText(file) {
-    if (!file.buffer?.length) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Uploaded resume file is empty");
-    }
-
-    try {
-      const rawText = await this.getRawResumeText(file);
-      const cleanedText = this.cleanExtractedText(rawText);
-
-      if (!cleanedText) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, "No readable text could be extracted from the resume");
-      }
-
-      return cleanedText;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to extract text from the uploaded resume", {
-        fileName: file.originalname,
-        mimeType: file.mimetype,
-        cause: error.message,
-      });
-    }
-  }
-
-  async getRawResumeText(file) {
-    switch (file.mimetype) {
-      case "application/pdf":
-        return this.extractPdfText(file.buffer);
-      case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        return this.extractDocxText(file.buffer);
-      case "application/msword":
-        return this.extractDocText(file.buffer);
-      default:
-        throw new ApiError(StatusCodes.BAD_REQUEST, "Unsupported resume file type");
-    }
-  }
-
-  async extractPdfText(buffer) {
-    try {
-      const parsed = await pdfParse(buffer);
-      return parsed.text ?? "";
-    } catch (error) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Unable to read PDF resume. The file may be corrupted.", {
-        cause: error.message,
-      });
-    }
-  }
-
-  async extractDocxText(buffer) {
-    try {
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value ?? "";
-    } catch (error) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Unable to read DOCX resume. The file may be corrupted.", {
-        cause: error.message,
-      });
-    }
-  }
-
-  async extractDocText(_buffer) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "Legacy DOC files are not supported for text extraction yet. Please upload a PDF or DOCX file.",
-    );
-  }
-
-  cleanExtractedText(text) {
-    return text
-      .replace(/\r/g, "\n")
-      .replace(/\t+/g, " ")
-      .replace(/[ ]{2,}/g, " ")
-      .replace(/\n{3,}/g, "\n\n")
-      .split("\n")
-      .map((line) => line.trim())
-      .join("\n")
-      .trim();
   }
 
   async parseResumeWithAI(resumeText) {
@@ -201,7 +121,7 @@ class ResumeAnalysisService {
         throw new ApiError(StatusCodes.BAD_GATEWAY, "Gemini returned an empty response for resume parsing");
       }
 
-      const parsedJson = JSON.parse(this.extractJsonString(content));
+      const parsedJson = JSON.parse(extractJsonStringFromLlm(content));
       return this.normalizeParsedResume(parsedJson);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -247,73 +167,6 @@ Return ONLY JSON:
 
 Resume:
 ${resumeText}`;
-  }
-
-  extractJsonString(content) {
-    const trimmed = content.trim();
-
-    if (trimmed.startsWith("```")) {
-      return trimmed.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "").trim();
-    }
-
-    return trimmed;
-  }
-
-  getResumeJsonSchema() {
-    return {
-      type: "object",
-      additionalProperties: false,
-      required: ["name", "skills", "experience", "projects", "education"],
-      properties: {
-        name: {
-          type: "string",
-        },
-        skills: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-        },
-        experience: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["role", "company", "duration", "description"],
-            properties: {
-              role: { type: "string" },
-              company: { type: "string" },
-              duration: { type: "string" },
-              description: { type: "string" },
-            },
-          },
-        },
-        projects: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["name", "tech_stack", "description"],
-            properties: {
-              name: { type: "string" },
-              tech_stack: {
-                type: "array",
-                items: {
-                  type: "string",
-                },
-              },
-              description: { type: "string" },
-            },
-          },
-        },
-        education: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-        },
-      },
-    };
   }
 
   createEmptyParsedResume() {

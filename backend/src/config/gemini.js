@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+
+import { isRetryableGeminiModelError } from "../utils/ai-errors.js";
 import { env } from "./env.js";
 import { logger } from "../utils/logger.js";
 
@@ -13,11 +15,6 @@ export const geminiClient = new GoogleGenAI({
 const getCandidateModels = () => {
   const configuredModels = [env.geminiModel, ...env.geminiFallbackModels];
   return [...new Set(configuredModels.filter(Boolean))];
-};
-
-const shouldTryNextModel = (error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("503") || message.includes("Service Unavailable") || message.includes("404");
 };
 
 export const generateGeminiContent = async ({ contents, config = {}, purpose = "generation" }) => {
@@ -42,7 +39,11 @@ export const generateGeminiContent = async ({ contents, config = {}, purpose = "
         model,
       });
 
-      return result;
+      return {
+        text: result.text,
+        model,
+        raw: result,
+      };
     } catch (error) {
       lastError = error;
       logger.warn("Gemini request failed", {
@@ -51,7 +52,8 @@ export const generateGeminiContent = async ({ contents, config = {}, purpose = "
         cause: error instanceof Error ? error.message : error,
       });
 
-      if (!shouldTryNextModel(error) || model === candidateModels[candidateModels.length - 1]) {
+      const isLastModel = model === candidateModels[candidateModels.length - 1];
+      if (!isRetryableGeminiModelError(error) || isLastModel) {
         break;
       }
     }

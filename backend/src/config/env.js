@@ -18,6 +18,9 @@ const envSchema = z.object({
   GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(5),
   VERCEL_URL: z.string().optional().default(""),
+  OPENAI_API_KEY: z.string().optional().default(""),
+  OPENAI_MODEL: z.string().optional().default("gpt-4o-mini"),
+  AI_PRIMARY_PROVIDER: z.enum(["gemini", "openai"]).optional().default("gemini"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -40,4 +43,7 @@ export const env = {
   geminiFallbackModels: parsed.data.GEMINI_FALLBACK_MODELS.split(",").map((model) => model.trim()).filter(Boolean),
   githubToken: parsed.data.GITHUB_TOKEN,
   maxFileSizeBytes: parsed.data.MAX_FILE_SIZE_MB * 1024 * 1024,
+  openAiApiKey: parsed.data.OPENAI_API_KEY?.trim() ?? "",
+  openAiModel: parsed.data.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+  aiPrimaryProvider: parsed.data.AI_PRIMARY_PROVIDER,
 };
