@@ -23,6 +23,11 @@ class AtsScannerService {
 
     const ai = await generateStructuredJson({
       purpose: "ats_scan",
+      fallbackData: {
+        optimization_suggestions: this.buildFallbackSuggestions({ missing, formattingIssues }),
+        additional_missing_keywords: [],
+        keyword_placement_tips: this.buildFallbackPlacementTips(missing),
+      },
       prompt: `You are an expert ATS (applicant tracking system) coach.
 
 Given a resume and a job description, return concise optimization guidance as JSON only.
@@ -63,6 +68,31 @@ ${truncate(resumeText, 8000)}
         keywordPlacementTips: Array.isArray(ai.keyword_placement_tips) ? ai.keyword_placement_tips.filter(Boolean).slice(0, 8) : [],
       },
     };
+  }
+
+  buildFallbackSuggestions({ missing, formattingIssues }) {
+    const suggestions = [];
+
+    if (missing.length) {
+      suggestions.push(`Add the most relevant missing keywords naturally: ${missing.slice(0, 8).join(", ")}.`);
+    }
+
+    if (formattingIssues.length) {
+      suggestions.push("Clean up resume formatting so section headings, bullet points, and contact details are easy for ATS systems to parse.");
+    }
+
+    suggestions.push("Mirror the target job description with truthful project, impact, and tool-specific language.");
+    suggestions.push("Prioritize measurable outcomes near the top of each role or project section.");
+
+    return suggestions;
+  }
+
+  buildFallbackPlacementTips(missing) {
+    return [
+      "Place role-critical keywords in the summary, skills, and most relevant experience bullets.",
+      missing.length ? `Group related terms such as ${missing.slice(0, 5).join(", ")} under a clear skills section.` : "Keep keyword placement specific and tied to real work.",
+      "Avoid keyword stuffing; each term should connect to a concrete responsibility or result.",
+    ];
   }
 }
 

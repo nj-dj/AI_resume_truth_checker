@@ -4,13 +4,23 @@ import { isRetryableGeminiModelError } from "../utils/ai-errors.js";
 import { env } from "./env.js";
 import { logger } from "../utils/logger.js";
 
-if (!env.geminiApiKey) {
-  throw new Error("GEMINI_API_KEY is missing in .env");
-}
+export const isGeminiConfigured = () => Boolean(env.geminiApiKey);
 
-export const geminiClient = new GoogleGenAI({
-  apiKey: env.geminiApiKey,
-});
+let cachedClient = null;
+
+export const getGeminiClient = () => {
+  if (!env.geminiApiKey) {
+    return null;
+  }
+
+  if (!cachedClient) {
+    cachedClient = new GoogleGenAI({
+      apiKey: env.geminiApiKey,
+    });
+  }
+
+  return cachedClient;
+};
 
 const getCandidateModels = () => {
   const configuredModels = [env.geminiModel, ...env.geminiFallbackModels];
@@ -18,6 +28,12 @@ const getCandidateModels = () => {
 };
 
 export const generateGeminiContent = async ({ contents, config = {}, purpose = "generation" }) => {
+  const geminiClient = getGeminiClient();
+
+  if (!geminiClient) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+
   const candidateModels = getCandidateModels();
   let lastError = null;
 

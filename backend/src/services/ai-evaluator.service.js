@@ -17,7 +17,7 @@ class AiEvaluatorService {
     };
 
     try {
-      const result = await generateGeminiContent({
+      const result = await generateLlmText({
         contents: this.buildEvaluationPrompt(enrichedInput),
         config: {
           temperature: 0,
@@ -28,19 +28,17 @@ class AiEvaluatorService {
       const content = result.text;
 
       if (!content) {
-        throw new ApiError(StatusCodes.BAD_GATEWAY, "Gemini returned an empty response for candidate evaluation");
+        throw new ApiError(StatusCodes.BAD_GATEWAY, "AI provider returned an empty response for candidate evaluation");
       }
 
       const parsedJson = JSON.parse(extractJsonStringFromLlm(content));
       return this.normalizeEvaluation(parsedJson, enrichedInput);
     } catch (error) {
       if (error instanceof ApiError) {
-        throw error;
+        return this.createFallbackEvaluation(enrichedInput, error.message);
       }
 
-      throw new ApiError(StatusCodes.BAD_GATEWAY, "Failed to evaluate candidate with Gemini", {
-        cause: error.message,
-      });
+      return this.createFallbackEvaluation(enrichedInput, error.message);
     }
   }
 
@@ -275,6 +273,32 @@ Resume: ${JSON.stringify(resumeData)}
 GitHub: ${JSON.stringify(githubData)}
 SkillValidation: ${JSON.stringify(skillValidation)}
 BaseScore: ${base_score}`;
+  }
+
+  createFallbackEvaluation(input, cause = "") {
+    const verified = input.skillValidation.verified ?? [];
+    const missing = input.skillValidation.missing ?? [];
+    const score = this.clampScore(input.base_score);
+
+    return {
+      score,
+      verified_skills: verified,
+      suspicious_claims: missing.slice(0, 5).map((skill) => ({
+        skill,
+        reason: "This skill appears on the resume, but matching GitHub evidence was not found in the available repository data.",
+      })),
+      strengths: verified.length
+        ? [`Verified ${verified.length} skill claim${verified.length === 1 ? "" : "s"} from GitHub signals.`]
+        : ["Resume was processed, but direct GitHub skill evidence was limited."],
+      weaknesses: missing.length
+        ? [`${missing.length} claimed skill${missing.length === 1 ? "" : "s"} need stronger evidence or clearer project context.`]
+        : ["Add measurable project outcomes to strengthen the credibility report."],
+      summary: cause
+        ? `Local fallback evaluation was used because the AI provider was unavailable. The score is based on resume skills and GitHub evidence only.`
+        : "Local fallback evaluation based on resume skills and GitHub evidence.",
+      decision: score >= 80 ? "Hire" : score >= 45 ? "Maybe" : "Reject",
+      confidence: verified.length || missing.length ? "Medium" : "Low",
+    };
   }
 }
 

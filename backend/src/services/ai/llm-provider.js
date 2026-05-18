@@ -1,59 +1,74 @@
-import { generateGeminiContent } from "../../config/gemini.js";
+import { generateGeminiContent, isGeminiConfigured } from "../../config/gemini.js";
 import { generateOpenAiContent, isOpenAiConfigured } from "../../config/openai.js";
+import { env } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
 import { getErrorMessage, isProviderFallbackError } from "../../utils/ai-errors.js";
 
+const buildProviderOrder = () => {
+  const primary = env.aiPrimaryProvider === "openai" ? "openai" : "gemini";
+  return primary === "openai" ? ["openai", "gemini"] : ["gemini", "openai"];
+};
+
+const isProviderAvailable = (provider) => {
+  if (provider === "openai") {
+    return isOpenAiConfigured();
+  }
+
+  return isGeminiConfigured();
+};
+
 /**
- * Generate text with Gemini (model fallbacks) and optional OpenAI provider fallback.
+ * Generate text with one or more AI providers. Uses provider-level fallback when a provider is unavailable or rate-limited.
  * @returns {{ text: string, provider: 'gemini' | 'openai', model: string }}
  */
 export const generateLlmText = async ({ contents, config = {}, purpose = "generation" }) => {
-  let geminiError = null;
+  const providerOrder = buildProviderOrder();
+  let lastError = null;
 
-  try {
-    const result = await generateGeminiContent({ contents, config, purpose });
-    return {
-      text: result.text ?? "",
-      provider: "gemini",
-      model: result.model ?? "unknown",
-    };
-  } catch (error) {
-    geminiError = error;
-    logger.warn("Gemini provider failed for all configured models", {
-      purpose,
-      cause: getErrorMessage(error),
-    });
+  for (const provider of providerOrder) {
+    if (!isProviderAvailable(provider)) {
+      logger.info("Skipping unavailable provider", { provider, purpose });
+      continue;
+    }
+
+    try {
+      logger.info("Attempting AI provider", { provider, purpose });
+
+      if (provider === "gemini") {
+        const result = await generateGeminiContent({ contents, config, purpose });
+        return {
+          text: result.text ?? "",
+          provider: "gemini",
+          model: result.model ?? "unknown",
+        };
+      }
+
+      const result = await generateOpenAiContent({ contents, config, purpose });
+      return {
+        text: result.text ?? "",
+        provider: "openai",
+        model: result.model ?? "unknown",
+      };
+    } catch (error) {
+      lastError = error;
+      logger.warn("AI provider request failed", {
+        provider,
+        purpose,
+        cause: getErrorMessage(error),
+      });
+
+      const isLastProvider = provider === providerOrder[providerOrder.length - 1];
+      if (!isProviderFallbackError(error) || isLastProvider) {
+        break;
+      }
+
+      logger.info("Falling back to the next AI provider", { provider, purpose });
+    }
   }
 
-  if (!isProviderFallbackError(geminiError)) {
-    throw geminiError;
+  if (lastError) {
+    throw lastError;
   }
 
-  if (!isOpenAiConfigured()) {
-    throw new Error(
-      `${getErrorMessage(geminiError)}. Configure OPENAI_API_KEY in backend/.env to enable automatic fallback when Gemini quota is exceeded.`,
-    );
-  }
-
-  logger.info("Falling back to OpenAI provider", { purpose });
-
-  try {
-    const result = await generateOpenAiContent({ contents, config, purpose });
-    logger.info("OpenAI fallback succeeded", { purpose, model: result.model });
-    return {
-      text: result.text ?? "",
-      provider: "openai",
-      model: result.model ?? "unknown",
-    };
-  } catch (openAiError) {
-    logger.error("OpenAI fallback failed", {
-      purpose,
-      geminiCause: getErrorMessage(geminiError),
-      openAiCause: getErrorMessage(openAiError),
-    });
-
-    throw new Error(
-      `All AI providers failed. Gemini: ${getErrorMessage(geminiError)}. OpenAI: ${getErrorMessage(openAiError)}`,
-    );
-  }
+  throw new Error("No AI provider is configured or available");
 };

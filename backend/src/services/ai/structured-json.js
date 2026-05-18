@@ -2,11 +2,11 @@ import { StatusCodes } from "http-status-codes";
 
 import { ApiError } from "../../utils/api-error.js";
 import { extractJsonStringFromLlm } from "../../utils/extract-json-from-llm.js";
-import { logger } from "../../utils/logger.js";
 import { getErrorMessage } from "../../utils/ai-errors.js";
+import { logger } from "../../utils/logger.js";
 import { generateLlmText } from "./llm-provider.js";
 
-export const generateStructuredJson = async ({ prompt, purpose, temperature = 0 }) => {
+export const generateStructuredJson = async ({ prompt, purpose, temperature = 0, fallbackData = null }) => {
   try {
     const result = await generateLlmText({
       contents: prompt,
@@ -31,6 +31,25 @@ export const generateStructuredJson = async ({ prompt, purpose, temperature = 0 
       },
     };
   } catch (error) {
+    if (fallbackData) {
+      logger.warn("Using local structured AI fallback", {
+        purpose,
+        cause: getErrorMessage(error),
+      });
+
+      const data = typeof fallbackData === "function" ? fallbackData(error) : fallbackData;
+
+      return {
+        ...data,
+        _meta: {
+          provider: "local",
+          model: "deterministic-fallback",
+          fallback: true,
+          cause: getErrorMessage(error),
+        },
+      };
+    }
+
     if (error instanceof ApiError) {
       throw error;
     }

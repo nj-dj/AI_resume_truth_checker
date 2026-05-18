@@ -45,7 +45,7 @@ class ResumeAnalysisService {
 
     const githubProfile = await this.executeStep(
       "fetch_github_profile",
-      async () => githubService.getGithubProfile(payload.githubUsername),
+      async () => this.getGithubProfileWithFallback(payload.githubUsername),
       {
         githubUsername: payload.githubUsername,
       },
@@ -107,7 +107,7 @@ class ResumeAnalysisService {
     }
 
     try {
-      const result = await generateGeminiContent({
+      const result = await generateLlmText({
         contents: this.buildResumeParsingPrompt(resumeText),
         config: {
           temperature: 0,
@@ -118,19 +118,91 @@ class ResumeAnalysisService {
       const content = result.text;
 
       if (!content) {
-        throw new ApiError(StatusCodes.BAD_GATEWAY, "Gemini returned an empty response for resume parsing");
+        throw new ApiError(StatusCodes.BAD_GATEWAY, "AI provider returned an empty response for resume parsing");
       }
 
       const parsedJson = JSON.parse(extractJsonStringFromLlm(content));
       return this.normalizeParsedResume(parsedJson);
     } catch (error) {
       if (error instanceof ApiError) {
+        logger.warn("Using local resume parsing fallback", { cause: error.message });
+        return this.parseResumeLocally(resumeText);
+      }
+
+      logger.warn("Using local resume parsing fallback", { cause: error.message });
+      return this.parseResumeLocally(resumeText);
+    }
+  }
+
+  parseResumeLocally(resumeText) {
+    const lines = resumeText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const knownSkills = [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "Python",
+      "Java",
+      "HTML",
+      "CSS",
+      "SQL",
+      "PostgreSQL",
+      "MongoDB",
+      "AWS",
+      "Docker",
+      "Kubernetes",
+      "GraphQL",
+      "REST",
+      "Next.js",
+      "Express",
+    ];
+
+    const lowerResume = resumeText.toLowerCase();
+    const skills = knownSkills.filter((skill) => lowerResume.includes(skill.toLowerCase()));
+    const projectLines = lines.filter((line) => /project|built|developed|implemented|designed|created/i.test(line)).slice(0, 5);
+    const experienceLines = lines.filter((line) => /engineer|developer|manager|intern|experience|worked/i.test(line)).slice(0, 5);
+
+    return {
+      name: lines[0] && lines[0].length < 80 ? lines[0].replace(/^name:\s*/i, "") : "",
+      skills,
+      experience: experienceLines.map((line) => ({
+        role: "",
+        company: "",
+        duration: "",
+        description: line,
+      })),
+      projects: projectLines.map((line, index) => ({
+        name: `Project ${index + 1}`,
+        tech_stack: skills,
+        description: line,
+      })),
+      education: lines.filter((line) => /degree|b\.?tech|m\.?tech|bachelor|master|university|college/i.test(line)).slice(0, 3),
+    };
+  }
+
+  async getGithubProfileWithFallback(githubUsername) {
+    try {
+      return await githubService.getGithubProfile(githubUsername);
+    } catch (error) {
+      if (error instanceof ApiError && error.statusCode === StatusCodes.NOT_FOUND) {
         throw error;
       }
 
-      throw new ApiError(StatusCodes.BAD_GATEWAY, "Failed to parse resume with Gemini", {
-        cause: error.message,
+      logger.warn("Using local GitHub profile fallback", {
+        githubUsername,
+        cause: error instanceof Error ? error.message : String(error),
       });
+
+      return {
+        username: githubUsername,
+        repo_count: 0,
+        repos: [],
+        top_languages: [],
+      };
     }
   }
 
