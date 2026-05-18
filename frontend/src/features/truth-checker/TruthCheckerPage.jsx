@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import ResultCard from "../../components/ResultCard.jsx";
 import UploadForm from "../../components/UploadForm.jsx";
+import { useSubscription } from "../../context/SubscriptionContext.jsx";
 import { analyzeCandidate } from "../../services/api.js";
 
 const LOADING_STEPS = [
@@ -160,6 +161,7 @@ const wait = (ms) =>
   });
 
 export default function TruthCheckerPage() {
+  const { consumeCredits } = useSubscription();
   const [resumeFile, setResumeFile] = useState(null);
   const [githubUsername, setGithubUsername] = useState("");
   const [result, setResult] = useState(null);
@@ -237,6 +239,12 @@ export default function TruthCheckerPage() {
         return;
       }
 
+      const usage = consumeCredits({ feature: "truthChecker", cost: 8 });
+      if (!usage.ok) {
+        setErrorMessage(usage.message);
+        return;
+      }
+
       const response = await analyzeCandidate({
         resumeFile,
         githubUsername: githubUsername.trim(),
@@ -252,21 +260,22 @@ export default function TruthCheckerPage() {
       });
     } catch (error) {
       setResult(null);
-      setErrorMessage(`AI service busy. Showing fallback analysis message. ${formatError(error)}`);
+      setErrorMessage(formatError(error));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-10">
-      <header className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Recruiter verification</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">AI Resume Truth Checker</h1>
-        <p className="mt-4 text-sm leading-7 text-[var(--muted)] sm:text-base">
-          Verify candidate claims using AI plus GitHub validation. This is the original MakeMyCV screening pipeline,
-          now embedded inside the broader EnhanceMyAICV career studio.
-        </p>
+    <div className="max-w-container-max mx-auto space-y-10">
+      <header className="space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary">Resume verification</p>
+        <div className="space-y-2 rounded-[1.5rem] panel-card-soft p-8">
+          <h1 className="text-headline-lg font-semibold tracking-tight text-primary">AI Resume Truth Checker</h1>
+          <p className="max-w-3xl text-body-lg text-on-surface-variant">
+            Check resume claims against AI analysis and GitHub activity, then get a clear credibility report.
+          </p>
+        </div>
       </header>
 
       <UploadForm
@@ -282,13 +291,13 @@ export default function TruthCheckerPage() {
       />
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-5 py-4 text-sm text-amber-900 dark:text-amber-100">
+        <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-5 py-4 text-sm text-amber-900">
           {errorMessage}
         </div>
       ) : null}
 
       {result ? (
-        <div ref={resultRef}>
+        <div ref={resultRef} className="space-y-6">
           <ResultCard result={result} githubInsight={githubInsight} />
         </div>
       ) : null}

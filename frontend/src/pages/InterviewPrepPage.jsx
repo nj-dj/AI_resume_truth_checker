@@ -1,9 +1,11 @@
 import { useState } from "react";
 
+import { useSubscription } from "../context/SubscriptionContext.jsx";
 import { formatApiError } from "../lib/formatApiError.js";
 import { postInterviewFeedback, postInterviewSession } from "../services/api.js";
 
 export default function InterviewPrepPage() {
+  const { consumeCredits } = useSubscription();
   const [roleTitle, setRoleTitle] = useState("Senior Frontend Engineer");
   const [level, setLevel] = useState("senior");
   const [interviewType, setInterviewType] = useState("mixed");
@@ -21,6 +23,12 @@ export default function InterviewPrepPage() {
     setLoadingSession(true);
     setSessionError("");
     try {
+      const usage = consumeCredits({ feature: "interviewSession", cost: 3 });
+      if (!usage.ok) {
+        setSessionError(usage.message);
+        return;
+      }
+
       const response = await postInterviewSession({ roleTitle, level, interviewType, focusAreas: [] });
       setSession(response.data);
       const firstQ = response.data?.technicalQuestions?.[0]?.question ?? response.data?.hrQuestions?.[0]?.question ?? "";
@@ -38,6 +46,12 @@ export default function InterviewPrepPage() {
     setLoadingFeedback(true);
     setFeedbackError("");
     try {
+      const usage = consumeCredits({ feature: "interviewFeedback", cost: 2 });
+      if (!usage.ok) {
+        setFeedbackError(usage.message);
+        return;
+      }
+
       const response = await postInterviewFeedback({ roleTitle, question, answer });
       setFeedback(response.data);
     } catch (err) {
@@ -49,32 +63,46 @@ export default function InterviewPrepPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Interview preparation</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-          Generates calibrated question banks and structured feedback on your answers. Voice-enabled mock interviews can
-          plug into the same API contracts later.
+    <div className="max-w-container-max mx-auto space-y-10">
+      <section className="rounded-[1.5rem] panel-card-soft p-8">
+        <p className="text-xs uppercase tracking-[0.24em] text-secondary">Interview Prep</p>
+        <h1 className="text-headline-lg font-semibold text-primary">Interview preparation</h1>
+        <p className="mt-4 max-w-3xl text-body-lg text-on-surface-variant">
+          Generate practice interview questions and get feedback to sharpen your answers.
         </p>
-      </div>
+      </section>
 
-      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6">
-        <h2 className="text-lg font-semibold">Mock interview session</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <label className="flex flex-col gap-2 text-sm font-medium md:col-span-2">
-            Role
+      <section className="space-y-6 panel-card p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">Mock interview session</h2>
+            <p className="mt-2 text-sm text-on-surface-variant">Create a targeted set of questions for your role and experience level.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void generateSession()}
+            disabled={loadingSession}
+            className="inline-flex items-center justify-center panel-button-primary px-6 py-3 text-sm font-semibold transition hover:bg-accent-400 disabled:opacity-60"
+          >
+            {loadingSession ? "Generating..." : "Generate interview questions"}
+          </button>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <label className="space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-5">
+            <span className="text-xs uppercase tracking-[0.18em] text-secondary">Role</span>
             <input
               value={roleTitle}
               onChange={(e) => setRoleTitle(e.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+              className="panel-input w-full px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             />
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Level
+          <label className="space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-5">
+            <span className="text-xs uppercase tracking-[0.18em] text-secondary">Level</span>
             <select
               value={level}
               onChange={(e) => setLevel(e.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+              className="panel-input w-full px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             >
               <option value="junior">Junior</option>
               <option value="mid">Mid</option>
@@ -82,12 +110,12 @@ export default function InterviewPrepPage() {
               <option value="lead">Lead</option>
             </select>
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium md:col-span-3">
-            Interview type
+          <label className="md:col-span-3 space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-5">
+            <span className="text-xs uppercase tracking-[0.18em] text-secondary">Interview type</span>
             <select
               value={interviewType}
               onChange={(e) => setInterviewType(e.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+              className="panel-input w-full px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             >
               <option value="mixed">Mixed</option>
               <option value="technical">Technical</option>
@@ -95,43 +123,36 @@ export default function InterviewPrepPage() {
             </select>
           </label>
         </div>
-        {sessionError ? <p className="text-sm text-rose-600 dark:text-rose-300">{sessionError}</p> : null}
-        <button
-          type="button"
-          onClick={() => void generateSession()}
-          disabled={loadingSession}
-          className="rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
-        >
-          {loadingSession ? "Generating…" : "Generate question bank"}
-        </button>
+
+        {sessionError ? <p className="text-sm text-rose-400">{sessionError}</p> : null}
 
         {session ? (
           <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Technical</h3>
-              <ul className="mt-2 space-y-3 text-sm text-[var(--text)]">
+            <div className="rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-6">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-secondary">Technical</h3>
+              <ul className="mt-4 space-y-3 text-sm text-on-surface-variant">
                 {session.technicalQuestions?.map((q) => (
-                  <li key={q.question} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                    <p className="font-medium">{q.question}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">Follow-up: {q.follow_up}</p>
+                  <li key={q.question} className="rounded-[1.5rem] border border-white/10 bg-surface-900 p-4">
+                    <p className="font-semibold text-on-surface">{q.question}</p>
+                    <p className="mt-2 text-xs text-on-surface-variant">Follow-up: {q.follow_up}</p>
                   </li>
                 ))}
               </ul>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">HR / behavioral</h3>
-              <ul className="mt-2 space-y-3 text-sm text-[var(--text)]">
+            <div className="rounded-[1.5rem] panel-card-soft p-6">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-secondary">HR / behavioral</h3>
+              <ul className="mt-4 space-y-3 text-sm text-on-surface-variant">
                 {session.hrQuestions?.map((q) => (
-                  <li key={q.question} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                    <p className="font-medium">{q.question}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">Follow-up: {q.follow_up}</p>
+                  <li key={q.question} className="rounded-[1.5rem] border border-white/10 bg-surface-900 p-4">
+                    <p className="font-semibold text-on-surface">{q.question}</p>
+                    <p className="mt-2 text-xs text-on-surface-variant">Follow-up: {q.follow_up}</p>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="md:col-span-2">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Checklist</h3>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--text)]">
+            <div className="md:col-span-2 rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-6">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-secondary">Checklist</h3>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-on-surface-variant">
                 {session.preparationChecklist?.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -141,65 +162,75 @@ export default function InterviewPrepPage() {
         ) : null}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6">
-        <h2 className="text-lg font-semibold">Answer feedback</h2>
-        <form className="space-y-4" onSubmit={submitFeedback}>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Question
+      <section className="space-y-6 panel-card p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">Answer feedback</h2>
+            <p className="mt-2 text-sm text-on-surface-variant">Submit your response to receive structured improvement guidance.</p>
+          </div>
+          <div className="text-sm text-on-surface-variant">Short, concise answers work best.</div>
+        </div>
+        <form className="space-y-5" onSubmit={submitFeedback}>
+          <label className="block space-y-2">
+            <span className="block text-xs uppercase tracking-[0.18em] text-secondary">Question</span>
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               rows={3}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+              className="w-full panel-input resize-y px-4 py-4 text-sm leading-6 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+              placeholder="Paste the interview question you want to practice..."
             />
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Your answer
+          <label className="block space-y-2">
+            <span className="block text-xs uppercase tracking-[0.18em] text-secondary">Your answer</span>
             <textarea
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               rows={6}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+              className="w-full panel-input resize-y px-4 py-4 text-sm leading-6 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+              placeholder="Write your spoken answer here. Aim for a concise, specific response."
             />
           </label>
-          {feedbackError ? <p className="text-sm text-rose-600 dark:text-rose-300">{feedbackError}</p> : null}
+          {feedbackError ? <p className="text-sm text-rose-400">{feedbackError}</p> : null}
           <button
             type="submit"
             disabled={loadingFeedback}
-            className="rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
+            className="inline-flex items-center justify-center panel-button-primary px-6 py-3 text-sm font-semibold transition hover:bg-accent-400 disabled:opacity-60"
           >
-            {loadingFeedback ? "Scoring…" : "Get structured feedback"}
+            {loadingFeedback ? "Reviewing..." : "Review my answer"}
           </button>
         </form>
 
         {feedback ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-200">Strengths</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-[1.5rem] border border-white/10 bg-emerald-500/10 p-5 text-sm">
+              <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">Strengths</p>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-on-surface-variant">
                 {feedback.strengths?.map((s) => (
                   <li key={s}>{s}</li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-900 dark:text-amber-100">Improvements</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
+            <div className="rounded-[1.5rem] border border-white/10 bg-amber-500/10 p-5 text-sm">
+              <p className="text-xs uppercase tracking-[0.16em] text-amber-100">Improvements</p>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-on-surface-variant">
                 {feedback.improvements?.map((s) => (
                   <li key={s}>{s}</li>
                 ))}
               </ul>
             </div>
-            <div className="md:col-span-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Confidence score</p>
-              <p className="mt-2 text-4xl font-semibold text-[var(--accent)]">{feedback.confidenceScore}</p>
-              <p className="mt-2 text-[var(--muted)]">{feedback.confidenceRationale}</p>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Model outline</p>
-              <ul className="mt-2 list-decimal space-y-1 pl-5">
-                {feedback.modelAnswerOutline?.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ul>
+            <div className="md:col-span-2 rounded-[1.5rem] border border-white/10 bg-surface-900 p-5 text-sm">
+              <p className="text-xs uppercase tracking-[0.16em] text-secondary">Confidence score</p>
+              <p className="mt-3 text-4xl font-semibold text-secondary">{feedback.confidenceScore}</p>
+              <p className="mt-3 text-on-surface-variant">{feedback.confidenceRationale}</p>
+              <div className="mt-5">
+                <p className="text-xs uppercase tracking-[0.16em] text-secondary">Model outline</p>
+                <ul className="mt-3 list-decimal space-y-2 pl-5 text-on-surface-variant">
+                  {feedback.modelAnswerOutline?.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         ) : null}

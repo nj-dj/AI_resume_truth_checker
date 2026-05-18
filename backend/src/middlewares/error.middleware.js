@@ -3,6 +3,7 @@ import multer from "multer";
 import { ZodError } from "zod";
 
 import { ApiError } from "../utils/api-error.js";
+import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
 export const errorHandler = (error, _request, response, _next) => {
@@ -37,5 +38,10 @@ export const errorHandler = (error, _request, response, _next) => {
   return response.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: "Internal server error",
+    ...(env.nodeEnv === "development" && {
+      cause: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }),
   });
 };
+

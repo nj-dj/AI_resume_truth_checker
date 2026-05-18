@@ -2,21 +2,21 @@ import SkillTag from "./SkillTag.jsx";
 
 const decisionTone = {
   Hire: {
-    icon: "✅",
-    classes: "text-emerald-200 border-emerald-400/25 bg-emerald-500/10",
+    icon: "check_circle",
+    classes: "border-emerald-600/30 bg-emerald-50 text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-emerald-200",
   },
   Maybe: {
-    icon: "⚠️",
-    classes: "text-amber-100 border-amber-400/25 bg-amber-500/10",
+    icon: "warning",
+    classes: "border-amber-600/30 bg-amber-50 text-amber-800 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100",
   },
   Reject: {
-    icon: "❌",
-    classes: "text-rose-100 border-rose-400/25 bg-rose-500/10",
+    icon: "cancel",
+    classes: "border-rose-600/30 bg-rose-50 text-rose-800 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-100",
   },
 };
 
 const scoreTone = (score) => {
-  if (score >= 70) return "from-emerald-400 to-cyan-300";
+  if (score >= 70) return "from-emerald-400 to-secondary";
   if (score >= 40) return "from-amber-300 to-orange-300";
   return "from-rose-300 to-red-400";
 };
@@ -33,44 +33,40 @@ export default function ResultCard({ result, githubInsight }) {
   const decisionMeta = decisionTone[decision] ?? decisionTone.Maybe;
 
   return (
-    <section className="animate-fade-up rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-glow backdrop-blur-xl sm:p-8">
+    <section className="animate-fade-up rounded-lg border border-outline-variant bg-surface p-6 shadow-glow sm:p-8">
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-3xl border border-white/8 bg-slate-950/70 p-6">
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Analysis Result</p>
+        <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-6">
+          <p className="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Analysis Result</p>
           <div className="mt-6">
-            <div
-              className={`inline-flex rounded-3xl bg-gradient-to-r ${scoreTone(
-                score,
-              )} p-[1px] shadow-[0_18px_48px_rgba(8,145,178,0.18)]`}
-            >
-              <div className="rounded-[22px] bg-slate-950/95 px-7 py-6 text-center">
-                <p className="text-sm text-slate-400">Trust Score</p>
-                <p className="mt-2 text-6xl font-semibold text-white">{score}</p>
-                <div className="mt-4 h-3 w-56 overflow-hidden rounded-full bg-white/8">
+            <div className={`inline-flex rounded-lg bg-gradient-to-r ${scoreTone(score)} p-[1px]`}>
+              <div className="rounded-lg bg-surface-container-lowest px-7 py-6 text-center">
+                <p className="text-sm text-on-surface-variant">Trust Score</p>
+                <p className="mt-2 text-6xl font-semibold text-primary">{score}</p>
+                <div className="mt-4 h-3 w-56 overflow-hidden rounded bg-surface-container-highest">
                   <div
-                    className={`h-full rounded-full ${scoreBarTone(score)} transition-all duration-700`}
+                    className={`h-full rounded ${scoreBarTone(score)} transition-all duration-700`}
                     style={{ width: `${Math.max(6, Math.min(score, 100))}%` }}
                   />
                 </div>
-                <p className="mt-3 text-sm text-slate-500">Confidence signal mapped across 100 points</p>
+                <p className="mt-3 text-sm text-on-surface-variant">Confidence signal mapped across 100 points</p>
               </div>
             </div>
 
-            <div className={`mt-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${decisionMeta.classes}`}>
-              <span>{decisionMeta.icon}</span>
+            <div className={`mt-5 inline-flex items-center gap-2 rounded border px-4 py-2 text-sm font-semibold ${decisionMeta.classes}`}>
+              <span className="material-symbols-outlined text-[18px]">{decisionMeta.icon}</span>
               <span>{decision}</span>
             </div>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-            <p className="text-sm font-medium text-slate-300">AI Summary</p>
-            <p className="mt-3 text-sm leading-7 text-slate-400">{summary}</p>
+          <div className="mt-8 rounded-lg border border-outline-variant bg-surface-container p-5">
+            <p className="text-sm font-medium text-on-surface">AI Summary</p>
+            <p className="mt-3 text-sm leading-7 text-on-surface-variant">{summary}</p>
           </div>
 
           {Array.isArray(result.strengths) && result.strengths.length ? (
-            <div className="mt-6 rounded-2xl border border-emerald-400/10 bg-emerald-500/[0.04] p-5">
-              <p className="text-sm font-medium text-emerald-200">Strengths</p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-emerald-100/90">
+            <div className="mt-6 rounded-lg border border-emerald-600/20 bg-emerald-50 p-5 dark:border-emerald-400/20 dark:bg-emerald-500/[0.04]">
+              <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Strengths</p>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-emerald-950/80 dark:text-emerald-100/90">
                 {result.strengths.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -79,9 +75,9 @@ export default function ResultCard({ result, githubInsight }) {
           ) : null}
 
           {Array.isArray(result.weaknesses) && result.weaknesses.length ? (
-            <div className="mt-4 rounded-2xl border border-amber-400/10 bg-amber-500/[0.04] p-5">
-              <p className="text-sm font-medium text-amber-100">Watchouts</p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-amber-50/90">
+            <div className="mt-4 rounded-lg border border-amber-600/20 bg-amber-50 p-5 dark:border-amber-400/20 dark:bg-amber-500/[0.04]">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-100">Watchouts</p>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-amber-950/80 dark:text-amber-50/90">
                 {result.weaknesses.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -89,68 +85,64 @@ export default function ResultCard({ result, githubInsight }) {
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-2xl border border-cyan-400/10 bg-cyan-500/[0.04] p-5">
+          <div className="mt-6 rounded-lg border border-secondary/20 bg-secondary/5 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-slate-200">GitHub Activity</p>
-                <p className="mt-1 text-sm text-slate-400">Context pulled from the current screening response.</p>
+                <p className="text-sm font-medium text-on-surface">GitHub Activity</p>
+                <p className="mt-1 text-sm text-on-surface-variant">Context pulled from the current screening response.</p>
               </div>
-              <div className="rounded-full bg-cyan-400/10 px-3 py-1 text-sm text-cyan-200">
+              <div className="rounded bg-secondary/10 px-3 py-1 text-sm text-secondary">
                 {githubInsight?.username || "Candidate"}
               </div>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Repositories</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{githubInsight?.repositories ?? 0}</p>
+              <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Repositories</p>
+                <p className="mt-2 text-2xl font-semibold text-primary">{githubInsight?.repositories ?? 0}</p>
               </div>
-              <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Languages detected</p>
-                <p className="mt-2 text-sm font-medium leading-6 text-slate-200">{githubInsight?.languagesLabel ?? "None"}</p>
+              <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Languages detected</p>
+                <p className="mt-2 text-sm font-medium leading-6 text-on-surface">{githubInsight?.languagesLabel ?? "None"}</p>
               </div>
-              <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Last active</p>
-                <p className="mt-2 text-sm font-medium leading-6 text-slate-200">{githubInsight?.lastActive ?? "N/A"}</p>
+              <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Last active</p>
+                <p className="mt-2 text-sm font-medium leading-6 text-on-surface">{githubInsight?.lastActive ?? "N/A"}</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-3xl border border-emerald-400/10 bg-emerald-500/[0.04] p-6">
+          <div className="rounded-lg border border-emerald-600/20 bg-emerald-50 p-6 dark:border-emerald-400/20 dark:bg-emerald-500/[0.04]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-xl font-semibold text-white">Verified Skills</h3>
-                <p className="mt-1 text-sm text-slate-400">Claims supported by GitHub signals.</p>
+                <h3 className="text-xl font-semibold text-primary">Verified Skills</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">Claims supported by GitHub signals.</p>
               </div>
-              <div className="rounded-full bg-emerald-400/10 px-3 py-1 text-sm text-emerald-200">
-                {verifiedSkills.length}
-              </div>
+              <div className="rounded bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-200">{verifiedSkills.length}</div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
               {verifiedSkills.length ? (
                 verifiedSkills.map((item) => (
-                  <div key={`${item.skill}-${item.evidence}`} className="rounded-2xl border border-emerald-400/15 bg-slate-950/60 p-4">
+                  <div key={`${item.skill}-${item.evidence}`} className="rounded-lg border border-emerald-600/15 bg-surface-container-lowest p-4 dark:border-emerald-400/15">
                     <SkillTag>{item.skill}</SkillTag>
-                    <p className="mt-3 max-w-md text-sm leading-6 text-emerald-100/85">{item.evidence}</p>
+                    <p className="mt-3 max-w-md text-sm leading-6 text-on-surface-variant">{item.evidence}</p>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">No verified skills were returned.</p>
+                <p className="text-sm text-on-surface-variant">No verified skills were returned.</p>
               )}
             </div>
           </div>
 
-          <div className="rounded-3xl border border-rose-400/10 bg-rose-500/[0.04] p-6">
+          <div className="rounded-lg border border-rose-600/20 bg-rose-50 p-6 dark:border-rose-400/20 dark:bg-rose-500/[0.04]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-xl font-semibold text-white">Suspicious Claims</h3>
-                <p className="mt-1 text-sm text-slate-400">Potential exaggerations or unsupported claims.</p>
+                <h3 className="text-xl font-semibold text-primary">Suspicious Claims</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">Potential exaggerations or unsupported claims.</p>
               </div>
-              <div className="rounded-full bg-rose-400/10 px-3 py-1 text-sm text-rose-200">
-                {suspiciousClaims.length}
-              </div>
+              <div className="rounded bg-rose-100 px-3 py-1 text-sm font-semibold text-rose-800 dark:bg-rose-400/10 dark:text-rose-200">{suspiciousClaims.length}</div>
             </div>
 
             <div className="mt-5 space-y-3">
@@ -158,16 +150,14 @@ export default function ResultCard({ result, githubInsight }) {
                 suspiciousClaims.map((item) => (
                   <div
                     key={`${item.skill}-${item.reason}`}
-                    className="rounded-2xl border border-rose-400/12 bg-slate-950/60 p-4 transition duration-300 hover:border-rose-400/25"
+                    className="rounded-lg border border-rose-600/20 bg-surface-container-lowest p-4 transition duration-150 hover:border-rose-600/35 dark:border-rose-400/20 dark:hover:border-rose-400/35"
                   >
-                    <div className="flex items-start gap-3">
-                      <SkillTag tone="danger">{item.skill}</SkillTag>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-rose-100/80">{item.reason}</p>
+                    <SkillTag tone="danger">{item.skill}</SkillTag>
+                    <p className="mt-3 text-sm leading-6 text-rose-950/80 dark:text-rose-100/80">{item.reason}</p>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">No suspicious claims were flagged.</p>
+                <p className="text-sm text-on-surface-variant">No suspicious claims were flagged.</p>
               )}
             </div>
           </div>

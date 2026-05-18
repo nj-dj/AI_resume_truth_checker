@@ -1,9 +1,11 @@
 import { useState } from "react";
 
+import { useSubscription } from "../context/SubscriptionContext.jsx";
 import { formatApiError } from "../lib/formatApiError.js";
 import { postCareerInsights } from "../services/api.js";
 
 export default function CareerAssistantPage() {
+  const { consumeCredits } = useSubscription();
   const [skillsRaw, setSkillsRaw] = useState("React, TypeScript, Node.js");
   const [targetRole, setTargetRole] = useState("Senior full-stack engineer");
   const [experienceYears, setExperienceYears] = useState(5);
@@ -17,6 +19,12 @@ export default function CareerAssistantPage() {
     setLoading(true);
     setError("");
     try {
+      const usage = consumeCredits({ feature: "careerInsights", cost: 4 });
+      if (!usage.ok) {
+        setError(usage.message);
+        return;
+      }
+
       const currentSkills = skillsRaw
         .split(/[,|\n]/)
         .map((s) => s.trim())
@@ -37,108 +45,107 @@ export default function CareerAssistantPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Career assistant</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">
+    <div className="max-w-container-max mx-auto space-y-10">
+      <section className="rounded-[1.5rem] panel-card-soft p-8">
+        <p className="text-xs uppercase tracking-[0.24em] text-secondary">Career Assistant</p>
+        <h1 className="text-headline-lg font-semibold text-primary">Career assistant</h1>
+        <p className="mt-4 max-w-3xl text-body-lg text-on-surface-variant">
           Skill gap analysis, roadmap milestones, learning recommendations, and conservative salary framing.
         </p>
-      </div>
+      </section>
 
-      <form onSubmit={handleSubmit} className="grid gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6 md:grid-cols-2">
-        <label className="flex flex-col gap-2 text-sm font-medium md:col-span-2">
-          Current skills
+      <form onSubmit={handleSubmit} className="grid gap-6 rounded-[1.5rem] panel-card p-8 md:grid-cols-2">
+        <label className="md:col-span-2 space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-6">
+          <span className="text-sm font-semibold uppercase tracking-[0.18em] text-on-surface-variant">Current skills</span>
           <textarea
             value={skillsRaw}
             onChange={(e) => setSkillsRaw(e.target.value)}
             rows={3}
-            className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+            className="w-full panel-input px-4 py-4 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
           />
         </label>
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Target role
+        <label className="space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-6">
+          <span className="text-sm font-semibold uppercase tracking-[0.18em] text-on-surface-variant">Target role</span>
           <input
             value={targetRole}
             onChange={(e) => setTargetRole(e.target.value)}
-            className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+            className="panel-input w-full rounded-[1.5rem] px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
           />
         </label>
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Years of experience
+        <label className="space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-6">
+          <span className="text-sm font-semibold uppercase tracking-[0.18em] text-on-surface-variant">Years of experience</span>
           <input
             type="number"
             min={0}
             max={40}
             value={experienceYears}
             onChange={(e) => setExperienceYears(e.target.value)}
-            className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+            className="panel-input w-full rounded-[1.5rem] px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
           />
         </label>
-        <label className="flex flex-col gap-2 text-sm font-medium md:col-span-2">
-          Location preference
+        <label className="md:col-span-2 space-y-3 rounded-[1.5rem] border border-white/10 bg-surface-950/80 p-6">
+          <span className="text-sm font-semibold uppercase tracking-[0.18em] text-on-surface-variant">Location preference</span>
           <input
             value={locationPreference}
             onChange={(e) => setLocationPreference(e.target.value)}
-            className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-2"
+            className="panel-input w-full rounded-[1.5rem] px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
           />
         </label>
-        {error ? (
-          <p className="text-sm text-rose-600 dark:text-rose-300 md:col-span-2">{error}</p>
-        ) : null}
+        {error ? <p className="text-sm text-rose-400 md:col-span-2">{error}</p> : null}
         <button
           type="submit"
           disabled={loading}
-          className="rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-slate-950 md:col-span-2 disabled:opacity-60"
+          className="md:col-span-2 inline-flex items-center justify-center panel-button-primary px-6 py-3 text-sm font-semibold transition hover:bg-accent-400 disabled:opacity-60"
         >
-          {loading ? "Analyzing…" : "Build career insights"}
+          {loading ? "Analyzing..." : "Get career advice"}
         </button>
       </form>
 
       {result ? (
         <div className="space-y-6">
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6">
-            <h2 className="text-lg font-semibold">Trending skills to watch</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <section className="rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-6">
+            <h2 className="text-lg font-semibold text-primary">Trending skills to watch</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
               {result.trendingSkills?.map((s) => (
-                <span key={s} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--text)]">
+                <span key={s} className="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
                   {s}
                 </span>
               ))}
             </div>
           </section>
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6">
-            <h2 className="text-lg font-semibold">Skill gaps</h2>
-            <ul className="mt-3 space-y-3 text-sm text-[var(--text)]">
+          <section className="rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-6">
+            <h2 className="text-lg font-semibold text-primary">Skill gaps</h2>
+            <div className="mt-4 space-y-4">
               {(result.skillGaps ?? []).map((gap) => (
-                <li key={gap.skill} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                  <p className="font-semibold text-[var(--accent)]">{gap.skill}</p>
-                  <p className="mt-1 text-[var(--muted)]">{gap.why_it_matters}</p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">Learning path</p>
-                  <p className="mt-1">{gap.learning_path}</p>
-                </li>
+                <div key={gap.skill} className="rounded-[1.5rem] border border-white/10 bg-surface-950 p-5">
+                  <p className="text-sm font-semibold text-secondary">{gap.skill}</p>
+                  <p className="mt-2 text-sm text-on-surface-variant">{gap.why_it_matters}</p>
+                  <p className="mt-3 text-xs uppercase tracking-[0.14em] text-on-surface-variant">Learning path</p>
+                  <p className="mt-1 text-sm text-on-surface">{gap.learning_path}</p>
+                </div>
               ))}
-            </ul>
+            </div>
           </section>
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6">
-            <h2 className="text-lg font-semibold">Roadmap</h2>
-            <div className="mt-3 space-y-3">
+          <section className="rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-6">
+            <h2 className="text-lg font-semibold text-primary">Roadmap</h2>
+            <div className="mt-4 space-y-4">
               {(result.roadmapMilestones ?? []).map((m) => (
-                <article key={m.title} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
-                  <p className="font-semibold">{m.title}</p>
-                  <p className="text-xs text-[var(--muted)]">{m.timeframe}</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--text)]">
+                <div key={m.title} className="rounded-[1.5rem] border border-white/10 bg-surface-950 p-5 text-sm">
+                  <p className="font-semibold text-on-surface">{m.title}</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">{m.timeframe}</p>
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-on-surface-variant">
                     {(m.actions ?? []).map((a) => (
                       <li key={a}>{a}</li>
                     ))}
                   </ul>
-                </article>
+                </div>
               ))}
             </div>
           </section>
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-6">
-            <h2 className="text-lg font-semibold">Salary insights</h2>
-            <p className="mt-2 text-sm leading-7 text-[var(--text)]">{result.salaryInsights?.summary}</p>
-            <p className="mt-2 text-xs text-[var(--muted)]">Confidence: {result.salaryInsights?.confidence}</p>
+          <section className="rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-6">
+            <h2 className="text-lg font-semibold text-primary">Salary insights</h2>
+            <p className="mt-3 text-sm leading-7 text-on-surface-variant">{result.salaryInsights?.summary}</p>
+            <p className="mt-3 text-xs uppercase tracking-[0.16em] text-on-surface-variant">Confidence: {result.salaryInsights?.confidence}</p>
           </section>
         </div>
       ) : null}

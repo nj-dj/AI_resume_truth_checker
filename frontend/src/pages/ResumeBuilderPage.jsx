@@ -20,27 +20,27 @@ function SortableSection({ section, onChangeTitle, onChangeBody }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div ref={setNodeRef} style={style} className="space-y-4 rounded-[1.5rem] border border-white/10 bg-surface-950/85 p-5">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--muted)]"
+          className="panel-button-secondary px-3 py-2 text-xs font-semibold"
           {...attributes}
           {...listeners}
         >
-          Drag
+          Move
         </button>
         <input
           value={section.title}
           onChange={(e) => onChangeTitle(section.id, e.target.value)}
-          className="min-w-[120px] flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold outline-none ring-[var(--accent)] focus:ring-2"
+          className="min-w-[120px] flex-1 panel-input px-4 py-3 text-sm font-semibold outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
         />
       </div>
       <textarea
         value={section.body}
         onChange={(e) => onChangeBody(section.id, e.target.value)}
         rows={5}
-        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm leading-6 outline-none ring-[var(--accent)] focus:ring-2"
+        className="w-full panel-input px-4 py-4 text-sm leading-6 text-on-surface outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
       />
     </div>
   );
@@ -118,24 +118,26 @@ export default function ResumeBuilderPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Smart resume builder</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-            Drag sections to reorder, edit inline, autosave to your browser, and export a print-friendly HTML preview. PDF
-            export uses your browser print dialog for pixel-perfect output.
-          </p>
+    <div className="max-w-container-max mx-auto space-y-10">
+      <section className="rounded-[1.5rem] panel-card-soft p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-secondary">Resume Builder</p>
+            <h1 className="text-headline-lg font-semibold text-primary">Smart resume builder</h1>
+            <p className="mt-4 max-w-3xl text-body-lg text-on-surface-variant">
+              Drag sections to reorder, edit inline, autosave in-browser, and export a clean resume preview.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={addSection} className="panel-button-secondary px-4 py-3 text-sm font-semibold">
+              Add section
+            </button>
+            <button type="button" onClick={exportHtml} className="panel-button-primary px-4 py-3 text-sm font-semibold text-on-secondary transition hover:bg-accent-400">
+              Export resume page
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={addSection} className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-semibold">
-            Add section
-          </button>
-          <button type="button" onClick={exportHtml} className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-slate-950">
-            Export HTML
-          </button>
-        </div>
-      </div>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -149,12 +151,12 @@ export default function ResumeBuilderPage() {
         </DndContext>
 
         <div>
-          <p className="text-sm font-semibold text-[var(--muted)]">Live preview</p>
-          <div className="mt-3 min-h-[520px] space-y-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-inner">
+          <p className="text-sm font-semibold text-secondary">Live preview</p>
+          <div className="mt-4 min-h-[520px] panel-card-soft p-6">
             {sections.map((s) => (
-              <section key={s.id}>
-                <h2 className="text-lg font-semibold text-[var(--text)]">{s.title}</h2>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{s.body}</p>
+              <section key={s.id} className="space-y-3">
+                <h2 className="text-lg font-semibold text-primary">{s.title}</h2>
+                <p className="whitespace-pre-wrap text-sm leading-7 text-on-surface-variant">{s.body}</p>
               </section>
             ))}
           </div>
