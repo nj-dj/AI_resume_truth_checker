@@ -69,6 +69,20 @@ export default function Dashboard() {
   const usedCredits = Math.min(state.creditsUsed, freeMonthlyCredits);
   const recentToolCount = state.usageEvents.length;
   const latestActivity = state.usageEvents[0]?.label ?? "No runs yet";
+  const creditUsePercent = isPro ? 0 : Math.round((usedCredits / freeMonthlyCredits) * 100);
+  const dashboardModules = modules.map((item) =>
+    item.title === "Resume Builder"
+      ? {
+          ...item,
+          status: state.settings.saveDrafts ? "Autosave on" : "Session only",
+        }
+      : item,
+  );
+  const tip = isPro
+    ? "Pro is active, so you can run unlimited AI tools without spending free credits."
+    : usedCredits
+      ? `${creditUsePercent}% of free credits used. Resume Verification and ATS Scanner consume the most credits.`
+      : "Start with Resume Verification to create your first real activity record.";
 
   return (
     <div className="mx-auto max-w-[1560px] space-y-6">
@@ -89,6 +103,25 @@ export default function Dashboard() {
             Recent activity
           </button>
         </div>
+
+        {state.settings.productTips ? (
+          <div className="mb-4 flex flex-col gap-3 border border-secondary/25 bg-secondary/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-[20px] text-secondary">tips_and_updates</span>
+              <div>
+                <p className="text-sm font-semibold text-primary">Workspace tip</p>
+                <p className="mt-1 text-sm text-on-surface-variant">{tip}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={openActivity}
+              className="inline-flex items-center justify-center border border-outline-variant px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-on-surface transition hover:border-secondary"
+            >
+              View activity
+            </button>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-12 gap-4">
           <article className="module-card group relative col-span-12 overflow-hidden bg-surface-container-low p-6 lg:col-span-8">
@@ -154,7 +187,7 @@ export default function Dashboard() {
             </div>
           </aside>
 
-          {modules.map((item, index) => (
+          {dashboardModules.map((item, index) => (
             <article
               key={item.title}
               className={`module-card col-span-12 flex flex-col p-5 md:col-span-6 lg:col-span-4 ${

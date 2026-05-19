@@ -3,6 +3,8 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from 
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { useSubscription } from "../context/SubscriptionContext.jsx";
+
 const STORAGE_KEY = "enhancemyaicv-resume-builder-v1";
 
 const defaultSections = () => [
@@ -47,7 +49,11 @@ function SortableSection({ section, onChangeTitle, onChangeBody }) {
 }
 
 export default function ResumeBuilderPage() {
+  const { state: subscription } = useSubscription();
+  const saveDrafts = subscription.settings.saveDrafts;
   const [sections, setSections] = useState(() => {
+    if (!saveDrafts) return defaultSections();
+
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultSections();
@@ -59,11 +65,16 @@ export default function ResumeBuilderPage() {
   });
 
   useEffect(() => {
+    if (!saveDrafts) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return undefined;
+    }
+
     const handle = window.setTimeout(() => {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sections));
     }, 400);
     return () => window.clearTimeout(handle);
-  }, [sections]);
+  }, [saveDrafts, sections]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -125,8 +136,13 @@ export default function ResumeBuilderPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-secondary">Resume Builder</p>
             <h1 className="text-headline-lg font-semibold text-primary">Smart resume builder</h1>
             <p className="mt-4 max-w-3xl text-body-lg text-on-surface-variant">
-              Drag sections to reorder, edit inline, autosave in-browser, and export a clean resume preview.
+              Drag sections to reorder, edit inline, {saveDrafts ? "autosave in-browser" : "work in this session"}, and export a clean resume preview.
             </p>
+            {!saveDrafts ? (
+              <p className="mt-3 border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                Local draft saving is off in Settings. Your edits stay available only until this tab is refreshed.
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={addSection} className="panel-button-secondary px-4 py-3 text-sm font-semibold">

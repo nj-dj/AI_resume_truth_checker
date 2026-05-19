@@ -22,6 +22,9 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().optional().default("gpt-4o-mini"),
   OPENAI_FALLBACK_MODELS: z.string().optional().default("gpt-4o-mini"),
   AI_PRIMARY_PROVIDER: z.enum(["gemini", "openai"]).optional().default("gemini"),
+  AUTH_JWT_SECRET: z.string().optional().default("dev-auth-secret-change-me"),
+  AUTH_ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(60),
+  AUTH_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -48,4 +51,7 @@ export const env = {
   openAiModel: parsed.data.OPENAI_MODEL?.trim() || "gpt-4o-mini",
   openAiFallbackModels: parsed.data.OPENAI_FALLBACK_MODELS.split(",").map((model) => model.trim()).filter(Boolean),
   aiPrimaryProvider: parsed.data.AI_PRIMARY_PROVIDER,
+  authJwtSecret: parsed.data.AUTH_JWT_SECRET?.trim() || "dev-auth-secret-change-me",
+  authAccessTokenTtlMinutes: parsed.data.AUTH_ACCESS_TOKEN_TTL_MINUTES,
+  authRefreshTokenTtlDays: parsed.data.AUTH_REFRESH_TOKEN_TTL_DAYS,
 };

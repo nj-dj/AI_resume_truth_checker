@@ -13,7 +13,8 @@ const parseSkills = (raw) =>
     .filter(Boolean);
 
 export default function JobsPage() {
-  const { consumeCredits } = useSubscription();
+  const { consumeCredits, state: subscription } = useSubscription();
+  const saveDrafts = subscription.settings.saveDrafts;
   const [skillsRaw, setSkillsRaw] = useState("TypeScript, React, Node.js");
   const [experienceYears, setExperienceYears] = useState(4);
   const [location, setLocation] = useState("");
@@ -22,6 +23,8 @@ export default function JobsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [savedIds, setSavedIds] = useState(() => {
+    if (!saveDrafts) return [];
+
     try {
       const raw = window.localStorage.getItem(STORAGE_SAVED);
       return raw ? JSON.parse(raw) : [];
@@ -31,8 +34,13 @@ export default function JobsPage() {
   });
 
   useEffect(() => {
+    if (!saveDrafts) {
+      window.localStorage.removeItem(STORAGE_SAVED);
+      return;
+    }
+
     window.localStorage.setItem(STORAGE_SAVED, JSON.stringify(savedIds));
-  }, [savedIds]);
+  }, [saveDrafts, savedIds]);
 
   const skills = useMemo(() => parseSkills(skillsRaw), [skillsRaw]);
 
@@ -80,6 +88,11 @@ export default function JobsPage() {
         <p className="mt-4 max-w-3xl text-body-lg text-on-surface-variant">
           Skill-weighted role matching with location-aware scoring and saved job tracking in your command center.
         </p>
+        {!saveDrafts ? (
+          <p className="mt-3 border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+            Saved jobs are session-only because local draft and history saving is off.
+          </p>
+        ) : null}
       </section>
 
       <div className="grid gap-6 panel-card p-6 lg:grid-cols-4">

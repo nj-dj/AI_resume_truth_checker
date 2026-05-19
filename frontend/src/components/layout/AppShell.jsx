@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { NavLink, Outlet } from "react-router-dom";
 
+import { useAuth } from "../../context/AuthContext.jsx";
 import { useSubscription } from "../../context/SubscriptionContext.jsx";
 import { useTheme } from "../../context/ThemeContext.jsx";
 
@@ -27,19 +28,25 @@ const navItems = [
 ];
 
 export default function AppShell() {
+  const { signOut, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const {
     activePanel,
     closePanel,
+    clearNotifications,
+    clearUsageHistory,
     createSupportTicket,
     downgradeToFree,
     freeMonthlyCredits,
     isPro,
+    notificationPermission,
+    openActivity,
     openSettings,
     openSupport,
     openUpgrade,
     remainingCredits,
     resetFreeCredits,
+    setAccountNotifications,
     state: subscription,
     updateSettings,
     upgradeToPro,
@@ -48,6 +55,16 @@ export default function AppShell() {
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
+  const initials = useMemo(() => {
+    const source = user?.name?.trim() || user?.email?.trim() || "User";
+    const parts = source.split(/\s+/).filter(Boolean);
+
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+
+    return source.slice(0, 2).toUpperCase();
+  }, [user?.email, user?.name]);
   const localDate = useMemo(
     () =>
       new Intl.DateTimeFormat("en-CA", {
@@ -136,6 +153,17 @@ export default function AppShell() {
             <span className="material-symbols-outlined text-[18px]">help_outline</span>
             Support
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileOpen(false);
+              void signOut();
+            }}
+            className="flex w-full items-center gap-3 px-2 py-2 text-left text-label-sm font-label-sm text-on-surface-variant transition hover:text-primary"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            Sign out
+          </button>
         </div>
       </div>
     </>
@@ -182,12 +210,16 @@ export default function AppShell() {
           <div className="flex items-center gap-4">
             <button
               type="button"
-              onClick={openSupport}
+              onClick={openActivity}
               className="relative inline-flex h-10 w-10 items-center justify-center rounded border border-transparent text-on-surface-variant transition hover:border-outline-variant hover:text-primary"
-              aria-label="Open support"
+              aria-label="Open notifications and recent activity"
             >
               <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-error" />
+              {subscription.unreadNotifications ? (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-semibold text-error-container">
+                  {Math.min(subscription.unreadNotifications, 9)}
+                </span>
+              ) : null}
             </button>
             <button
               type="button"
@@ -196,12 +228,20 @@ export default function AppShell() {
               aria-label="Open profile settings"
             >
               <div className="hidden text-right sm:block">
-                <p className="font-label-sm text-label-sm uppercase text-primary">User profile</p>
-                <p className="text-[10px] text-on-surface-variant">Career workspace</p>
+                <p className="font-label-sm text-label-sm uppercase text-primary">{user?.name || "User profile"}</p>
+                <p className="max-w-[11rem] truncate text-[10px] text-on-surface-variant">{user?.email || "Career workspace"}</p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded border border-outline-variant bg-surface-container-highest text-label-sm font-semibold text-primary">
-                A1
+                {initials}
               </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="hidden h-10 w-10 items-center justify-center rounded border border-transparent text-on-surface-variant transition hover:border-outline-variant hover:text-primary sm:inline-flex"
+              aria-label="Sign out"
+            >
+              <span className="material-symbols-outlined text-[20px]">logout</span>
             </button>
           </div>
         </header>
@@ -264,19 +304,19 @@ export default function AppShell() {
                   <div className="border border-secondary bg-secondary/10 p-5">
                     <p className="text-label-sm font-label-sm uppercase tracking-widest text-secondary">Pro</p>
                     <p className="mt-3 text-3xl font-semibold text-primary">$9/mo</p>
-                    <p className="mt-1 text-body-md text-on-surface-variant">unlimited local credits, priority workflows, and export-focused tools.</p>
+                    <p className="mt-1 text-body-md text-on-surface-variant">Unlimited credits for this local workspace, priority workflows, and export-focused tools.</p>
                     <button
                       type="button"
                       onClick={upgradeToPro}
                       disabled={isPro}
                       className="mt-5 w-full rounded bg-secondary px-5 py-3 text-sm font-black uppercase tracking-widest text-on-secondary transition hover:brightness-110 disabled:opacity-60"
                     >
-                      {isPro ? "Pro already active" : "Activate Pro demo"}
+                      {isPro ? "Pro already active" : "Activate local Pro"}
                     </button>
                   </div>
                 </div>
                 <p className="text-sm leading-6 text-on-surface-variant">
-                  This implementation is ready to swap the demo activation for Stripe, Razorpay, or your backend billing endpoint later.
+                  This changes the real in-app plan state used by every credit-gated tool in this workspace.
                 </p>
               </div>
             ) : null}
@@ -285,16 +325,34 @@ export default function AppShell() {
               <div className="space-y-5 p-5">
                 <div className="grid gap-3">
                   {[
-                    ["emailUpdates", "Email product and account updates"],
-                    ["productTips", "Show product tips in the app"],
-                    ["saveDrafts", "Save local drafts and usage history"],
-                  ].map(([key, label]) => (
+                    [
+                      "emailUpdates",
+                      "Product and account notifications",
+                      notificationPermission === "granted"
+                        ? "Browser notifications are enabled. Updates also appear in Recent Activity."
+                        : notificationPermission === "denied"
+                          ? "Browser notifications are blocked, but in-app updates still work."
+                          : "Enable to request browser notifications and keep in-app account updates.",
+                    ],
+                    ["productTips", "Show product tips in the app", "Shows contextual dashboard guidance based on current credits, plan, and activity."],
+                    ["saveDrafts", "Save local drafts and usage history", "Controls browser storage for resume drafts, saved jobs, and usage history."],
+                  ].map(([key, label, description]) => (
                     <label key={key} className="flex items-center justify-between gap-4 border border-outline-variant bg-surface p-4">
-                      <span className="text-body-md text-on-surface">{label}</span>
+                      <span>
+                        <span className="block text-body-md text-on-surface">{label}</span>
+                        <span className="mt-1 block text-sm text-on-surface-variant">{description}</span>
+                      </span>
                       <input
                         type="checkbox"
                         checked={subscription.settings[key]}
-                        onChange={(event) => updateSettings({ [key]: event.target.checked })}
+                        onChange={(event) => {
+                          if (key === "emailUpdates") {
+                            void setAccountNotifications(event.target.checked);
+                            return;
+                          }
+
+                          updateSettings({ [key]: event.target.checked });
+                        }}
                         className="h-5 w-5 accent-secondary"
                       />
                     </label>
@@ -305,14 +363,16 @@ export default function AppShell() {
                   <button
                     type="button"
                     onClick={resetFreeCredits}
-                    className="rounded border border-outline-variant bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:border-secondary"
+                    disabled={subscription.creditsUsed === 0 && !subscription.usageEvents.length}
+                    className="rounded border border-outline-variant bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:border-secondary disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Reset demo credits
                   </button>
                   <button
                     type="button"
                     onClick={downgradeToFree}
-                    className="rounded border border-outline-variant bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:border-secondary"
+                    disabled={!isPro}
+                    className="rounded border border-outline-variant bg-surface-container px-4 py-3 text-sm font-semibold text-on-surface transition hover:border-secondary disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Switch to free plan
                   </button>
@@ -378,8 +438,16 @@ export default function AppShell() {
                 </div>
 
                 <section className="border border-outline-variant bg-surface">
-                  <div className="border-b border-outline-variant px-4 py-3">
+                  <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3">
                     <h3 className="text-sm font-semibold text-primary">Tool usage</h3>
+                    <button
+                      type="button"
+                      onClick={clearUsageHistory}
+                      disabled={!subscription.usageEvents.length}
+                      className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant transition hover:text-secondary disabled:opacity-40"
+                    >
+                      Clear
+                    </button>
                   </div>
                   <div className="divide-y divide-outline-variant">
                     {subscription.usageEvents.length ? (
@@ -396,6 +464,36 @@ export default function AppShell() {
                       ))
                     ) : (
                       <p className="px-4 py-6 text-sm text-on-surface-variant">No tool activity yet. Run an analysis to populate this feed.</p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="border border-outline-variant bg-surface">
+                  <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3">
+                    <h3 className="text-sm font-semibold text-primary">Notifications</h3>
+                    <button
+                      type="button"
+                      onClick={clearNotifications}
+                      disabled={!subscription.notifications?.length}
+                      className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant transition hover:text-secondary disabled:opacity-40"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="divide-y divide-outline-variant">
+                    {subscription.notifications?.length ? (
+                      subscription.notifications.slice(0, 6).map((item) => (
+                        <div key={item.id} className="px-4 py-3">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-semibold text-on-surface">{item.title}</p>
+                            <span className="text-xs uppercase tracking-[0.14em] text-secondary">{item.type}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-on-surface-variant">{item.message}</p>
+                          <p className="mt-1 text-xs text-on-surface-variant">{new Date(item.createdAt).toLocaleString()}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="px-4 py-6 text-sm text-on-surface-variant">No notifications yet.</p>
                     )}
                   </div>
                 </section>

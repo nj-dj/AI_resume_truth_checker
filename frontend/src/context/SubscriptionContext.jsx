@@ -2,12 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 const STORAGE_KEY = "resumeos-subscription-v1";
 const FREE_MONTHLY_CREDITS = 30;
+const LOCAL_DRAFT_KEYS = ["enhancemyaicv-resume-builder-v1", "enhancemyaicv-saved-jobs"];
 
 const initialState = {
   plan: "free",
   creditsUsed: 0,
   billingCycleStartedAt: new Date().toISOString(),
   usageEvents: [],
+  notifications: [],
+  unreadNotifications: 0,
   settings: {
     emailUpdates: true,
     productTips: true,
@@ -55,7 +58,14 @@ export function SubscriptionProvider({ children }) {
   const [activePanel, setActivePanel] = useState(null);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const persistentState = state.settings.saveDrafts
+      ? state
+      : {
+          ...state,
+          usageEvents: [],
+        };
+
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentState));
   }, [state]);
 
   const remainingCredits = Math.max(FREE_MONTHLY_CREDITS - state.creditsUsed, 0);
@@ -64,8 +74,83 @@ export function SubscriptionProvider({ children }) {
   const openUpgrade = useCallback(() => setActivePanel("upgrade"), []);
   const openSettings = useCallback(() => setActivePanel("settings"), []);
   const openSupport = useCallback(() => setActivePanel("support"), []);
-  const openActivity = useCallback(() => setActivePanel("activity"), []);
+  const openActivity = useCallback(() => {
+    setActivePanel("activity");
+    setState((current) => ({
+      ...current,
+      unreadNotifications: 0,
+    }));
+  }, []);
   const closePanel = useCallback(() => setActivePanel(null), []);
+
+  const notificationPermission =
+    typeof window !== "undefined" && "Notification" in window ? window.Notification.permission : "unsupported";
+
+  const showBrowserNotification = useCallback(
+    ({ title, message }) => {
+      if (!state.settings.emailUpdates || notificationPermission !== "granted") {
+        return;
+      }
+
+      new window.Notification(title, {
+        body: message,
+        tag: "resumeos-account-update",
+      });
+    },
+    [notificationPermission, state.settings.emailUpdates],
+  );
+
+  const addAccountNotification = useCallback(
+    ({ title, message, type = "account" }) => {
+      setState((current) => {
+        if (!current.settings.emailUpdates) {
+          return current;
+        }
+
+        return {
+          ...current,
+          unreadNotifications: current.unreadNotifications + 1,
+          notifications: [
+            {
+              id: crypto.randomUUID(),
+              title,
+              message,
+              type,
+              createdAt: new Date().toISOString(),
+            },
+            ...(current.notifications ?? []),
+          ].slice(0, 20),
+        };
+      });
+      showBrowserNotification({ title, message });
+    },
+    [showBrowserNotification],
+  );
+
+  const setAccountNotifications = useCallback(
+    async (enabled) => {
+      if (enabled && typeof window !== "undefined" && "Notification" in window && window.Notification.permission === "default") {
+        await window.Notification.requestPermission();
+      }
+
+      setState((current) => ({
+        ...current,
+        settings: {
+          ...current.settings,
+          emailUpdates: enabled,
+        },
+      }));
+
+      if (enabled) {
+        addAccountNotification({
+          title: "Account notifications enabled",
+          message: "Resume.OS will now keep product, support, and billing updates in your notification center.",
+          type: "settings",
+        });
+      }
+    },
+    [addAccountNotification],
+  );
 
   const upgradeToPro = useCallback(() => {
     setState((current) => ({
@@ -73,15 +158,25 @@ export function SubscriptionProvider({ children }) {
       plan: "pro",
       upgradedAt: new Date().toISOString(),
     }));
+    addAccountNotification({
+      title: "Pro workspace activated",
+      message: "Credits are now unlimited for this local workspace.",
+      type: "billing",
+    });
     setActivePanel(null);
-  }, []);
+  }, [addAccountNotification]);
 
   const downgradeToFree = useCallback(() => {
     setState((current) => ({
       ...current,
       plan: "free",
     }));
-  }, []);
+    addAccountNotification({
+      title: "Free plan restored",
+      message: "The workspace is back on the free monthly credit allowance.",
+      type: "billing",
+    });
+  }, [addAccountNotification]);
 
   const resetFreeCredits = useCallback(() => {
     setState((current) => ({
@@ -90,7 +185,12 @@ export function SubscriptionProvider({ children }) {
       billingCycleStartedAt: new Date().toISOString(),
       usageEvents: [],
     }));
-  }, []);
+    addAccountNotification({
+      title: "Credits reset",
+      message: "Free demo credits and usage history were reset for this workspace.",
+      type: "billing",
+    });
+  }, [addAccountNotification]);
 
   const consumeCredits = useCallback(
     ({ feature, cost }) => {
@@ -107,17 +207,19 @@ export function SubscriptionProvider({ children }) {
       setState((current) => ({
         ...current,
         creditsUsed: current.plan === "free" ? Math.min(current.creditsUsed + cost, FREE_MONTHLY_CREDITS) : current.creditsUsed,
-        usageEvents: [
-          {
-            id: crypto.randomUUID(),
-            feature,
-            label,
-            cost: current.plan === "free" ? cost : 0,
-            plan: current.plan,
-            createdAt: new Date().toISOString(),
-          },
-          ...current.usageEvents,
-        ].slice(0, 20),
+        usageEvents: current.settings.saveDrafts
+          ? [
+              {
+                id: crypto.randomUUID(),
+                feature,
+                label,
+                cost: current.plan === "free" ? cost : 0,
+                plan: current.plan,
+                createdAt: new Date().toISOString(),
+              },
+              ...current.usageEvents,
+            ].slice(0, 20)
+          : current.usageEvents,
       }));
 
       return { ok: true };
@@ -126,8 +228,15 @@ export function SubscriptionProvider({ children }) {
   );
 
   const updateSettings = useCallback((nextSettings) => {
+    if (nextSettings.saveDrafts === false && typeof window !== "undefined") {
+      for (const key of LOCAL_DRAFT_KEYS) {
+        window.localStorage.removeItem(key);
+      }
+    }
+
     setState((current) => ({
       ...current,
+      usageEvents: nextSettings.saveDrafts === false ? [] : current.usageEvents,
       settings: {
         ...current.settings,
         ...nextSettings,
@@ -148,6 +257,26 @@ export function SubscriptionProvider({ children }) {
         ...current.supportTickets,
       ].slice(0, 10),
     }));
+    addAccountNotification({
+      title: "Support ticket created",
+      message: ticket.subject || "Your support request was saved in the workspace.",
+      type: "support",
+    });
+  }, [addAccountNotification]);
+
+  const clearUsageHistory = useCallback(() => {
+    setState((current) => ({
+      ...current,
+      usageEvents: [],
+    }));
+  }, []);
+
+  const clearNotifications = useCallback(() => {
+    setState((current) => ({
+      ...current,
+      notifications: [],
+      unreadNotifications: 0,
+    }));
   }, []);
 
   const value = useMemo(
@@ -156,16 +285,20 @@ export function SubscriptionProvider({ children }) {
       closePanel,
       consumeCredits,
       createSupportTicket,
+      clearNotifications,
+      clearUsageHistory,
       downgradeToFree,
       featureLabels,
       freeMonthlyCredits: FREE_MONTHLY_CREDITS,
       isPro,
+      notificationPermission,
       openActivity,
       openSettings,
       openSupport,
       openUpgrade,
       remainingCredits,
       resetFreeCredits,
+      setAccountNotifications,
       state,
       updateSettings,
       upgradeToPro,
@@ -175,14 +308,18 @@ export function SubscriptionProvider({ children }) {
       closePanel,
       consumeCredits,
       createSupportTicket,
+      clearNotifications,
+      clearUsageHistory,
       downgradeToFree,
       isPro,
+      notificationPermission,
       openActivity,
       openSettings,
       openSupport,
       openUpgrade,
       remainingCredits,
       resetFreeCredits,
+      setAccountNotifications,
       state,
       updateSettings,
       upgradeToPro,

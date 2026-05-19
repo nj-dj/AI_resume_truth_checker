@@ -1,9 +1,48 @@
 import axios from "axios";
 
+export const AUTH_SESSION_STORAGE_KEY = "resume-os-auth-session";
+
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
   timeout: 120000,
 });
+
+apiClient.interceptors.request.use((config) => {
+  const rawSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+
+  if (rawSession) {
+    try {
+      const session = JSON.parse(rawSession);
+      if (session?.accessToken) {
+        config.headers.Authorization = `Bearer ${session.accessToken}`;
+      }
+    } catch {
+      window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    }
+  }
+
+  return config;
+});
+
+export const signupUser = async (payload) => {
+  const response = await apiClient.post("/auth/signup", payload);
+  return response.data;
+};
+
+export const loginUser = async (payload) => {
+  const response = await apiClient.post("/auth/login", payload);
+  return response.data;
+};
+
+export const getCurrentUser = async () => {
+  const response = await apiClient.get("/auth/me");
+  return response.data;
+};
+
+export const logoutUser = async () => {
+  const response = await apiClient.post("/auth/logout");
+  return response.data;
+};
 
 export const analyzeCandidate = async ({ resumeFile, githubUsername }) => {
   const formData = new FormData();
