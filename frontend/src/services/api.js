@@ -7,6 +7,23 @@ const apiClient = axios.create({
   timeout: 120000,
 });
 
+const shouldRetryApiRoute = (error) => {
+  const status = error.response?.status;
+  return status === 404 || status >= 500;
+};
+
+const postWithApiRouteFallback = async (path, payload) => {
+  try {
+    return await apiClient.post(path, payload);
+  } catch (error) {
+    if (apiClient.defaults.baseURL === "/api" && shouldRetryApiRoute(error)) {
+      return apiClient.post(`/api${path}`, payload);
+    }
+
+    throw error;
+  }
+};
+
 apiClient.interceptors.request.use((config) => {
   const rawSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
 
@@ -25,12 +42,12 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export const signupUser = async (payload) => {
-  const response = await apiClient.post("/auth/signup", payload);
+  const response = await postWithApiRouteFallback("/auth/signup", payload);
   return response.data;
 };
 
 export const loginUser = async (payload) => {
-  const response = await apiClient.post("/auth/login", payload);
+  const response = await postWithApiRouteFallback("/auth/login", payload);
   return response.data;
 };
 
