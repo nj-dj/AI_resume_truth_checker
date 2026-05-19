@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 
+import { useSubscription } from "../context/SubscriptionContext.jsx";
+
 const modules = [
   {
     label: "Improve",
@@ -63,8 +65,13 @@ const modules = [
 ];
 
 export default function Dashboard() {
+  const { freeMonthlyCredits, isPro, openActivity, remainingCredits, state } = useSubscription();
+  const usedCredits = Math.min(state.creditsUsed, freeMonthlyCredits);
+  const recentToolCount = state.usageEvents.length;
+  const latestActivity = state.usageEvents[0]?.label ?? "No runs yet";
+
   return (
-    <div className="mx-auto max-w-[1560px] space-y-10">
+    <div className="mx-auto max-w-[1560px] space-y-6">
       <section>
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -73,7 +80,11 @@ export default function Dashboard() {
               Choose a resume, job search, writing, or interview tool to continue.
             </p>
           </div>
-          <button className="inline-flex w-fit items-center gap-2 rounded border border-outline-variant bg-surface px-4 py-3 text-label-sm font-label-sm uppercase tracking-widest text-on-surface transition hover:bg-surface-container-low">
+          <button
+            type="button"
+            onClick={openActivity}
+            className="inline-flex w-fit items-center gap-2 rounded border border-outline-variant bg-surface px-4 py-3 text-label-sm font-label-sm uppercase tracking-widest text-on-surface transition hover:bg-surface-container-low"
+          >
             <span className="material-symbols-outlined text-[18px]">history</span>
             Recent activity
           </button>
@@ -115,25 +126,28 @@ export default function Dashboard() {
             <h3 className="mb-4 text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Progress snapshot</h3>
             <div className="space-y-2 font-code-md text-code-md">
               <div className="flex justify-between border-b border-outline-variant/40 py-2">
-                <span className="text-on-surface-variant">Active Search</span>
-                <span className="text-primary">12 Active</span>
+                <span className="text-on-surface-variant">Recent tool runs</span>
+                <span className="text-primary">{recentToolCount}</span>
               </div>
               <div className="flex justify-between border-b border-outline-variant/40 py-2">
-                <span className="text-on-surface-variant">Average ATS score</span>
-                <span className="text-secondary">94%</span>
+                <span className="text-on-surface-variant">Free credits</span>
+                <span className="text-secondary">{isPro ? "Pro" : `${remainingCredits}/${freeMonthlyCredits}`}</span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-on-surface-variant">Prep Readiness</span>
-                <span className="text-primary">B+ High</span>
+                <span className="text-on-surface-variant">Latest activity</span>
+                <span className="max-w-[9rem] truncate text-right text-primary">{latestActivity}</span>
               </div>
             </div>
             <div className="mt-10 h-24 overflow-hidden border border-outline-variant/60 bg-surface-container">
               <div className="flex h-full items-end gap-1 px-2">
-                {[40, 60, 45, 75, 90, 85].map((height, index) => (
+                {[25, 45, 65, 85, 100, 75].map((height, index) => (
                   <span
                     key={height + index}
                     className="w-full bg-secondary"
-                    style={{ height: `${height}%`, opacity: 0.35 + index * 0.1 }}
+                    style={{
+                      height: `${Math.max(12, Math.round((usedCredits / freeMonthlyCredits) * height))}%`,
+                      opacity: 0.35 + index * 0.1,
+                    }}
                   />
                 ))}
               </div>

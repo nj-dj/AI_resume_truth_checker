@@ -15,9 +15,9 @@ export default function UploadForm({
   const fileId = useId();
 
   return (
-    <section className="panel-card p-6 sm:p-8">
+    <section className="panel-card p-5 sm:p-6">
       <div>
-        <div className="mb-8 flex flex-col gap-4 border-b border-outline-variant pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 border-b border-outline-variant pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-label-sm font-label-sm panel-label">Resume verification</p>
             <h2 className="mt-2 text-headline-md font-semibold text-primary">Upload Resume for Verification</h2>
@@ -34,11 +34,11 @@ export default function UploadForm({
           </div>
         </div>
 
-        <form className="space-y-6" onSubmit={onSubmit}>
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <form className="space-y-5" onSubmit={onSubmit}>
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <label
               htmlFor={fileId}
-              className="group flex cursor-pointer flex-col justify-between rounded-lg border border-dashed border-outline-variant bg-surface-container-lowest p-5 transition duration-150 hover:border-secondary/60 hover:bg-surface-container"
+              className="group flex cursor-pointer flex-col justify-between rounded-lg border border-dashed border-outline-variant bg-surface-container-lowest p-4 transition duration-150 hover:border-secondary/60 hover:bg-surface-container sm:p-5"
             >
               <div>
                 <span className="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Resume file</span>

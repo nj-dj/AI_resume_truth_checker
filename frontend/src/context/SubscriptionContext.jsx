@@ -64,6 +64,7 @@ export function SubscriptionProvider({ children }) {
   const openUpgrade = useCallback(() => setActivePanel("upgrade"), []);
   const openSettings = useCallback(() => setActivePanel("settings"), []);
   const openSupport = useCallback(() => setActivePanel("support"), []);
+  const openActivity = useCallback(() => setActivePanel("activity"), []);
   const closePanel = useCallback(() => setActivePanel(null), []);
 
   const upgradeToPro = useCallback(() => {
@@ -159,6 +160,7 @@ export function SubscriptionProvider({ children }) {
       featureLabels,
       freeMonthlyCredits: FREE_MONTHLY_CREDITS,
       isPro,
+      openActivity,
       openSettings,
       openSupport,
       openUpgrade,
@@ -175,6 +177,7 @@ export function SubscriptionProvider({ children }) {
       createSupportTicket,
       downgradeToFree,
       isPro,
+      openActivity,
       openSettings,
       openSupport,
       openUpgrade,

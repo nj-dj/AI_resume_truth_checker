@@ -267,10 +267,10 @@ export default function TruthCheckerPage() {
   };
 
   return (
-    <div className="max-w-container-max mx-auto space-y-10">
-      <header className="space-y-4">
+    <div className="max-w-container-max mx-auto space-y-6">
+      <header className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-secondary">Resume verification</p>
-        <div className="space-y-2 rounded-[1.5rem] panel-card-soft p-8">
+        <div className="space-y-2 rounded-[1.5rem] panel-card-soft p-5 sm:p-6">
           <h1 className="text-headline-lg font-semibold tracking-tight text-primary">AI Resume Truth Checker</h1>
           <p className="max-w-3xl text-body-lg text-on-surface-variant">
             Check resume claims against AI analysis and GitHub activity, then get a clear credibility report.

@@ -86,12 +86,17 @@ class GithubService {
   }
 
   buildHeaders() {
-    return {
+    const headers = {
       Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${env.githubToken}`,
       "User-Agent": "ai-resume-truth-checker",
       "X-GitHub-Api-Version": "2022-11-28",
     };
+
+    if (env.githubToken) {
+      headers.Authorization = `Bearer ${env.githubToken}`;
+    }
+
+    return headers;
   }
 
   async safeReadJson(response) {

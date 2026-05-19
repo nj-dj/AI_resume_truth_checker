@@ -34,15 +34,15 @@ export default function ResultCard({ result, githubInsight }) {
 
   return (
     <section className="animate-fade-up rounded-lg border border-outline-variant bg-surface p-6 shadow-glow sm:p-8">
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-6">
+      <div className="grid gap-6 min-[1500px]:grid-cols-[0.9fr_1.1fr]">
+        <div className="min-w-0 rounded-lg border border-outline-variant bg-surface-container-lowest p-5 sm:p-6">
           <p className="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Analysis Result</p>
           <div className="mt-6">
             <div className={`inline-flex rounded-lg bg-gradient-to-r ${scoreTone(score)} p-[1px]`}>
               <div className="rounded-lg bg-surface-container-lowest px-7 py-6 text-center">
                 <p className="text-sm text-on-surface-variant">Trust Score</p>
                 <p className="mt-2 text-6xl font-semibold text-primary">{score}</p>
-                <div className="mt-4 h-3 w-56 overflow-hidden rounded bg-surface-container-highest">
+                <div className="mt-4 h-3 w-full max-w-56 overflow-hidden rounded bg-surface-container-highest">
                   <div
                     className={`h-full rounded ${scoreBarTone(score)} transition-all duration-700`}
                     style={{ width: `${Math.max(6, Math.min(score, 100))}%` }}
@@ -95,24 +95,24 @@ export default function ResultCard({ result, githubInsight }) {
                 {githubInsight?.username || "Candidate"}
               </div>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Repositories</p>
                 <p className="mt-2 text-2xl font-semibold text-primary">{githubInsight?.repositories ?? 0}</p>
               </div>
               <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Languages detected</p>
-                <p className="mt-2 text-sm font-medium leading-6 text-on-surface">{githubInsight?.languagesLabel ?? "None"}</p>
+                <p className="mt-2 break-words text-sm font-medium leading-6 text-on-surface">{githubInsight?.languagesLabel ?? "None"}</p>
               </div>
               <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Last active</p>
-                <p className="mt-2 text-sm font-medium leading-6 text-on-surface">{githubInsight?.lastActive ?? "N/A"}</p>
+                <p className="mt-2 break-words text-sm font-medium leading-6 text-on-surface">{githubInsight?.lastActive ?? "N/A"}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div className="rounded-lg border border-emerald-600/20 bg-emerald-50 p-6 dark:border-emerald-400/20 dark:bg-emerald-500/[0.04]">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -125,9 +125,9 @@ export default function ResultCard({ result, githubInsight }) {
             <div className="mt-5 flex flex-wrap gap-3">
               {verifiedSkills.length ? (
                 verifiedSkills.map((item) => (
-                  <div key={`${item.skill}-${item.evidence}`} className="rounded-lg border border-emerald-600/15 bg-surface-container-lowest p-4 dark:border-emerald-400/15">
+                  <div key={`${item.skill}-${item.evidence}`} className="min-w-0 rounded-lg border border-emerald-600/15 bg-surface-container-lowest p-4 dark:border-emerald-400/15">
                     <SkillTag>{item.skill}</SkillTag>
-                    <p className="mt-3 max-w-md text-sm leading-6 text-on-surface-variant">{item.evidence}</p>
+                    <p className="mt-3 max-w-md break-words text-sm leading-6 text-on-surface-variant">{item.evidence}</p>
                   </div>
                 ))
               ) : (

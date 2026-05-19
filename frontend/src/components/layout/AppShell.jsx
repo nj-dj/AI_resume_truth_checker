@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -7,7 +7,7 @@ import { useTheme } from "../../context/ThemeContext.jsx";
 
 const navLinkClass = ({ isActive }) =>
   [
-    "flex items-center gap-3 px-4 py-3 text-body-md transition duration-150",
+    "flex items-center gap-3 px-3 py-2.5 text-sm transition duration-150",
     isActive
       ? "border-l-2 border-primary bg-surface-variant text-primary"
       : "border-l-2 border-transparent text-on-surface-variant hover:bg-surface-container-highest hover:text-primary",
@@ -48,6 +48,24 @@ export default function AppShell() {
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
+  const localDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+        .format(new Date())
+        .replaceAll("-", "."),
+    [],
+  );
+
+  const panelMeta = {
+    upgrade: { eyebrow: "Subscription", title: "Upgrade Resume.OS" },
+    settings: { eyebrow: "Control Panel", title: "Settings" },
+    support: { eyebrow: "Support Desk", title: "Contact Support" },
+    activity: { eyebrow: "Workspace", title: "Recent Activity" },
+  };
 
   const handleSupportSubmit = (event) => {
     event.preventDefault();
@@ -67,11 +85,11 @@ export default function AppShell() {
 
   const nav = (
     <>
-      <div className="p-6">
+      <div className="p-5">
         <h1 className="font-headline-md text-headline-md font-bold uppercase tracking-tighter text-primary">RESUME.OS</h1>
         <p className="text-body-md text-on-surface-variant opacity-70">Career tools</p>
       </div>
-      <nav className="flex-1 overflow-y-auto px-2 py-4">
+      <nav className="flex-1 overflow-y-auto px-2 py-2">
         <div className="space-y-1">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className={navLinkClass} onClick={() => setMobileOpen(false)}>
@@ -81,19 +99,19 @@ export default function AppShell() {
           ))}
         </div>
       </nav>
-      <div className="mt-auto border-t border-outline-variant bg-surface-container-lowest/50 p-4">
+      <div className="mt-auto border-t border-outline-variant bg-surface-container-lowest/50 p-3">
         <button
           type="button"
           onClick={() => closeMobileAnd(openUpgrade)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-3 text-label-sm font-semibold uppercase tracking-widest text-on-secondary transition hover:brightness-110"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2.5 text-label-sm font-semibold uppercase tracking-widest text-on-secondary transition hover:brightness-110"
         >
           <span className="material-symbols-outlined text-[18px]">upgrade</span>
           {isPro ? "Pro plan active" : "Upgrade to Pro"}
         </button>
-        <div className="mt-3 border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface-variant">
+        <div className="mt-2 border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface-variant">
           {isPro ? "Unlimited usage" : `Free credits: ${remainingCredits}/${freeMonthlyCredits}`}
         </div>
-        <div className="mt-4 space-y-1">
+        <div className="mt-3 space-y-0.5">
           <button
             type="button"
             onClick={toggleTheme}
@@ -124,8 +142,8 @@ export default function AppShell() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-on-surface lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
-      <aside className="sticky top-0 z-50 hidden h-screen w-64 flex-col border-r border-outline-variant bg-surface-container-low lg:flex">
+    <div className="min-h-screen bg-background text-on-surface lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="sticky top-0 z-50 hidden h-dvh w-60 flex-col border-r border-outline-variant bg-surface-container-low lg:flex">
         {nav}
       </aside>
 
@@ -138,7 +156,7 @@ export default function AppShell() {
       ) : null}
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-outline-variant bg-surface/80 px-4 backdrop-blur-xl lg:px-6">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-outline-variant bg-surface/80 px-4 backdrop-blur-xl lg:px-5">
           <div className="flex min-w-0 items-center gap-3 md:gap-4">
             <button
               type="button"
@@ -189,31 +207,31 @@ export default function AppShell() {
         </header>
 
         <motion.main
-          className="min-h-[calc(100vh-4rem)] bg-background px-4 pb-10 pt-8 sm:px-6 lg:px-8"
+          className="min-h-[calc(100dvh-3.5rem)] bg-background px-4 pb-8 pt-5 sm:px-5 lg:px-6"
           transition={{ duration: 0.25 }}
         >
           <Outlet />
         </motion.main>
 
-        <footer className="hidden border-t border-outline-variant bg-surface-container-lowest px-6 py-4 text-code-md font-code-md text-on-surface-variant lg:flex lg:items-center lg:justify-between">
+        <footer className="hidden border-t border-outline-variant bg-surface-container-lowest px-5 py-3 text-code-md font-code-md text-on-surface-variant lg:flex lg:items-center lg:justify-between">
           <span className="text-primary">Resume.OS v2.4.0 | Ready</span>
-          <span>Local date: 2026.05.18</span>
+          <span>Local date: {localDate}</span>
         </footer>
       </div>
 
       {activePanel ? (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-4" onMouseDown={closePanel}>
           <div
-            className="w-full max-w-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto border border-outline-variant bg-surface-container-lowest shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between border-b border-outline-variant p-5">
               <div>
                 <p className="text-label-sm font-label-sm uppercase tracking-widest text-secondary">
-                  {activePanel === "upgrade" ? "Subscription" : activePanel === "settings" ? "Control Panel" : "Support Desk"}
+                  {panelMeta[activePanel]?.eyebrow ?? "Workspace"}
                 </p>
                 <h2 className="mt-2 text-headline-md font-semibold text-primary">
-                  {activePanel === "upgrade" ? "Upgrade Resume.OS" : activePanel === "settings" ? "Settings" : "Contact Support"}
+                  {panelMeta[activePanel]?.title ?? "Resume.OS"}
                 </h2>
               </div>
               <button
@@ -337,6 +355,71 @@ export default function AppShell() {
                     Submit support ticket
                   </button>
                 </form>
+              </div>
+            ) : null}
+
+            {activePanel === "activity" ? (
+              <div className="space-y-5 p-5">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="border border-outline-variant bg-surface p-4">
+                    <p className="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Plan</p>
+                    <p className="mt-2 text-title-md font-semibold capitalize text-primary">{subscription.plan}</p>
+                  </div>
+                  <div className="border border-outline-variant bg-surface p-4">
+                    <p className="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Credits</p>
+                    <p className="mt-2 text-title-md font-semibold text-primary">
+                      {isPro ? "Unlimited" : `${remainingCredits}/${freeMonthlyCredits}`}
+                    </p>
+                  </div>
+                  <div className="border border-outline-variant bg-surface p-4">
+                    <p className="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Tickets</p>
+                    <p className="mt-2 text-title-md font-semibold text-primary">{subscription.supportTickets.length}</p>
+                  </div>
+                </div>
+
+                <section className="border border-outline-variant bg-surface">
+                  <div className="border-b border-outline-variant px-4 py-3">
+                    <h3 className="text-sm font-semibold text-primary">Tool usage</h3>
+                  </div>
+                  <div className="divide-y divide-outline-variant">
+                    {subscription.usageEvents.length ? (
+                      subscription.usageEvents.slice(0, 8).map((event) => (
+                        <div key={event.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-on-surface">{event.label}</p>
+                            <p className="text-xs text-on-surface-variant">{new Date(event.createdAt).toLocaleString()}</p>
+                          </div>
+                          <span className="text-xs uppercase tracking-[0.14em] text-secondary">
+                            {event.plan === "pro" ? "Pro" : `${event.cost} credits`}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="px-4 py-6 text-sm text-on-surface-variant">No tool activity yet. Run an analysis to populate this feed.</p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="border border-outline-variant bg-surface">
+                  <div className="border-b border-outline-variant px-4 py-3">
+                    <h3 className="text-sm font-semibold text-primary">Support tickets</h3>
+                  </div>
+                  <div className="divide-y divide-outline-variant">
+                    {subscription.supportTickets.length ? (
+                      subscription.supportTickets.slice(0, 5).map((ticket) => (
+                        <div key={ticket.id} className="px-4 py-3">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-semibold text-on-surface">{ticket.subject}</p>
+                            <span className="text-xs uppercase tracking-[0.14em] text-secondary">{ticket.status}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-on-surface-variant">{new Date(ticket.createdAt).toLocaleString()}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="px-4 py-6 text-sm text-on-surface-variant">No support tickets saved.</p>
+                    )}
+                  </div>
+                </section>
               </div>
             ) : null}
           </div>

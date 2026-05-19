@@ -332,3 +332,31 @@ button {
   color: #ffffff !important;
   filter: none !important;
 }
+
+@media (min-width: 1024px) and (max-height: 850px) {
+  .space-y-10 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse))) !important;
+    margin-bottom: calc(1.5rem * var(--tw-space-y-reverse)) !important;
+  }
+
+  .p-8 {
+    padding: 1.5rem !important;
+  }
+
+  .min-h-\[640px\] {
+    min-height: 28rem !important;
+  }
+
+  .h-\[640px\] {
+    height: 28rem !important;
+  }
+
+  .min-h-\[520px\] {
+    min-height: 24rem !important;
+  }
+
+  .min-h-\[340px\] {
+    min-height: 14rem !important;
+  }
+}
