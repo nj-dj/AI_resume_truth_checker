@@ -83,13 +83,23 @@ const hashPassword = async (password) => {
 };
 
 const verifyPassword = async (password, storedHash) => {
+  if (typeof storedHash !== "string") {
+    return false;
+  }
+
   const [algorithm, salt, hash] = storedHash.split(":");
   if (algorithm !== "scrypt" || !salt || !hash) {
     return false;
   }
 
   const key = await scrypt(password, salt, 64);
-  const expected = Buffer.from(hash, "base64url");
+  let expected;
+
+  try {
+    expected = Buffer.from(hash, "base64url");
+  } catch {
+    return false;
+  }
 
   return expected.length === key.length && crypto.timingSafeEqual(expected, key);
 };
