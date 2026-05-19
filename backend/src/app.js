@@ -40,6 +40,8 @@ export const createApp = () => {
   });
 
   app.use("/api", apiRouter);
+  // Vercel experimentalServices strips routePrefix before forwarding to Express.
+  app.use(apiRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);
 
